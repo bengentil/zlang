@@ -11,9 +11,13 @@ Example:
 	/*
 		1st Hello world script in zlang
 	*/
+
+	// extern keyword to allow binding of C functions
+	// C equivalent: extern void println(char*)
 	extern println(string)
 
 	// pointer support
+	// C equivalent: extern void* foo(int*)
 	extern foo(@int) @
 
 	square is func(int x) int {
@@ -34,6 +38,15 @@ Example:
 		return 0
 	}
 
+```
+
+Running:
+--------
+
+``` bash
+$ cat hello_world.zl | zlang
+Hello, 世界
+SUCCESS
 ```
 
 Status
