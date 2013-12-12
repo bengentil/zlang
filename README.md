@@ -41,7 +41,7 @@ Status
 
 Zlang is at early alpha stage and is for educational purposes only (don't try to implement)
 
-[x] Lexer
-[] Parser (In progress)
-[] JIT Interpreter (In progress)
-[] Compiler
+- [x] Lexer
+- [] Parser (In progress)
+- [] JIT Interpreter (In progress)
+- [] Compiler
