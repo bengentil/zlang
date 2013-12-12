@@ -27,7 +27,7 @@ Example:
 	main is func() int {
 		println("Hello, 世界") // support UTF-8 encoding
 
-		// result = square
+		// result = square(2)
 		result is square(2)
 		if result neq 4 {
 			println("FAILURE: \"not 4\"")
@@ -47,6 +47,55 @@ Running:
 $ cat hello_world.zl | zlang
 Hello, 世界
 SUCCESS
+```
+
+Debugging Bytecode
+------------------
+
+``` bash
+# Dump bytecode
+$ cat hello_world.zl | zlang -emit-llvm
+	; ModuleID = 'stdin'
+
+	@.str = private unnamed_addr constant [20 x i8] c"Hello World, \E4\B8\96\E7\95\8C\00", align 1
+	@.str1 = private unnamed_addr constant [17 x i8] c"FAILURE: \22not 4\22\00", align 1
+	@.str2 = private unnamed_addr constant [8 x i8] c"SUCCESS\00", align 1
+
+	declare void @println(i8*)
+	declare void* @foo(i32*)
+
+	define i32 @square(i32 %x) nounwind uwtable {
+	  %1 = alloca i32, align 4
+	  store i32 %x, i32* %1, align 4
+	  %2 = load i32* %1, align 4
+	  %3 = load i32* %1, align 4
+	  %4 = mul nsw i32 %2, %3
+	  ret i32 %4
+	}
+
+	define i32 @main() nounwind uwtable {
+	  %1 = alloca i32, align 4
+	  %result = alloca i32, align 4
+	  store i32 0, i32* %1
+	  call void @println(i8* getelementptr inbounds ([20 x i8]* @.str, i32 0, i32 0))
+	  %2 = call i32 @square(i32 2)
+	  store i32 %2, i32* %result, align 4
+	  %3 = load i32* %result, align 4
+	  %4 = icmp eq i32 %3, 4
+	  br i1 %4, label %5, label %6
+
+	; <label>:5                                       ; preds = %0
+	  call void @println(i8* getelementptr inbounds ([17 x i8]* @.str1, i32 0, i32 0))
+	  br label %7
+
+	; <label>:6                                       ; preds = %0
+	  call void @println(i8* getelementptr inbounds ([8 x i8]* @.str2, i32 0, i32 0))
+	  br label %7
+
+	; <label>:7                                       ; preds = %6, %5
+	  ret i32 0
+	}
+
 ```
 
 Status
