@@ -52,7 +52,7 @@ SUCCESS
 Status
 ------
 
-Zlang is at early alpha stage and is for educational purposes only (don't try to implement)
+Zlang is at **early alpha stage** and is for educational purposes only (**don't implement real-world application with Zlang**)
 
 - [x] Lexer
 - [ ] Parser (In progress)
