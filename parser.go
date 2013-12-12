@@ -1,0 +1,371 @@
+// Copyright 2013 Benjamin Gentil. All rights reserved.
+// license can be found in the LICENSE file (MIT License)
+package zlang
+
+import (
+	"fmt"
+	"github.com/axw/gollvm/llvm"
+	//"strconv"
+)
+
+type Parser struct {
+	Input       string
+	Module      llvm.Module
+	Builder     llvm.Builder
+	l           *Lexer
+	currentItem LexItem
+	errorCount  int
+	depth       int
+}
+
+func NewParser(name, input string) *Parser {
+	return &Parser{Input: input, Module: llvm.NewModule(name), Builder: llvm.NewBuilder(), l: NewLexer(name, input), currentItem: LexItem{Token: TOK_BLANK, Val: ""}, errorCount: 0, depth: 0}
+}
+
+func (p *Parser) NextItem() {
+	if p.l != nil && p.currentItem.Token != TOK_EOF {
+		p.currentItem = p.l.NextItem()
+		if p.currentItem.Token == TOK_ERROR {
+			p.RaiseError("Formating error, %v", p.currentItem.Val)
+			p.NextItem()
+		}
+	}
+}
+
+func (p *Parser) DepthIndent() string {
+	s := ""
+	for i := 0; i < p.depth; i++ {
+		s += "  "
+	}
+	return fmt.Sprintf("[%s:%d] ", p.l.name, p.l.lineNumber())
+}
+
+func (p *Parser) Pos() string {
+	return fmt.Sprintf("[%s:%d] ", p.l.name, p.l.lineNumber())
+}
+
+func (p *Parser) RaiseError(f string, v ...interface{}) {
+	p.errorCount++
+	Errorln(p.Pos()+f, v...)
+}
+
+func (p *Parser) parseInteger() *NodeInteger {
+	return NInteger(p.currentItem.Val)
+}
+
+func (p *Parser) parseFloat() *NodeFloat {
+	return NFloat("0.0")
+}
+
+func (p *Parser) parseIdentifier() NodeExpr {
+
+	identifierName := p.currentItem.Val
+	p.NextItem() // skip identifier
+
+	if p.currentItem.Token == TOK_IDENTIFIER {
+		return NIdentifier(p.currentItem.Val)
+	}
+
+	if p.currentItem.Token == TOK_ENDL {
+		return NIdentifier(identifierName)
+	}
+
+	// function call
+	if p.currentItem.Token == TOK_LPAREN {
+		p.NextItem()
+		return p.parseFunctionCall(identifierName)
+	}
+
+	if p.currentItem.Token == TOK_MUL {
+		return p.parseBinOP(0, NIdentifier(identifierName))
+	}
+
+	p.RaiseError("Expected identifier, got %v", p.currentItem.Token)
+	return nil
+}
+
+func (p *Parser) parseParen() NodeExpr {
+	p.NextItem() // skip '('
+	exp := p.parseExpression()
+	if exp == nil {
+		return nil
+	}
+	if p.currentItem.Token != TOK_RPAREN {
+		p.RaiseError("Expected ')', got %v", p.currentItem.Token)
+		return nil
+	}
+	p.NextItem() // skip ')'
+	return exp
+}
+
+func (p *Parser) parseBinOP(prec int, LHS NodeExpr) NodeExpr {
+	for {
+		tok_prec := p.currentItem.Token.Precedence()
+
+		if tok_prec < prec {
+			return LHS
+		}
+
+		op := p.currentItem.Token.String()
+		p.NextItem()
+		RHS := p.parsePrimary()
+		if RHS == nil {
+			return nil
+		}
+
+		next_prec := p.currentItem.Token.Precedence()
+		if tok_prec < next_prec {
+			RHS = p.parseBinOP(tok_prec+1, RHS)
+			if RHS == nil {
+				return nil
+			}
+		}
+
+		LHS = NBinOp(op, LHS, RHS)
+	}
+	return nil
+}
+
+func (p *Parser) parsePrimary() NodeExpr {
+	switch p.currentItem.Token {
+	case TOK_IDENTIFIER:
+		return p.parseIdentifier()
+	case TOK_INT:
+		return p.parseInteger()
+	case TOK_LPAREN:
+		return p.parseParen()
+	case TOK_RBLOCK:
+		p.NextItem()
+		return nil
+	}
+	p.RaiseError("Expected expression, got %v", p.currentItem.Token)
+	return nil
+}
+
+func (p *Parser) parseExpression() NodeExpr {
+	LHS := p.parsePrimary()
+	if LHS == nil {
+		return nil
+	}
+	return p.parseBinOP(0, LHS)
+}
+
+func (p *Parser) parseAssign(varName string) *NodeExpStmt {
+	LHS := NIdentifier(varName)
+	RHS := p.parseExpression()
+	return NExprStmt(NAssignement(LHS, RHS))
+}
+
+func (p *Parser) parseFunctionCall(funcName string) *NodeCallExpr {
+	var args []NodeExpr
+Loop:
+	for {
+		arg := p.parseExpression()
+		if arg == nil {
+			return nil
+		}
+		args = append(args, arg)
+
+		if p.currentItem.Token == TOK_RPAREN {
+			break Loop
+		}
+
+		if p.currentItem.Token != TOK_COMMA {
+			p.RaiseError("Expected ')' or ',' in arg list, got %v", p.currentItem.Token)
+			return nil
+		}
+
+		p.NextItem() // skip comma
+	}
+
+	p.NextItem() // skip ')'
+	return NCallExpr(NIdentifier(funcName), args)
+}
+
+func (p *Parser) parseFunction(funcName string) *NodeFunction {
+	p.NextItem() // skip func keyword
+
+	proto := p.parsePrototype(funcName)
+	if proto == nil {
+		return nil
+	}
+
+	if p.currentItem.Token != TOK_LBLOCK {
+		p.RaiseError("Expected '{' after function definition, got %v", p.currentItem.Token)
+		return nil
+	}
+	p.NextItem() // skip left block
+	body := p.parseBlock()
+	p.NextItem() // skip right block
+	return NFunction(proto, body)
+}
+
+func (p *Parser) parseReturn() *NodeReturn {
+	p.NextItem() // skip return keyword
+	return NReturn(p.parseExpression())
+}
+
+func (p *Parser) parsePrototype(funcName string) *NodePrototype {
+	fName := NIdentifier(funcName)
+
+	if p.currentItem.Token != TOK_LPAREN {
+		p.RaiseError("Expected '(' in prototype, got %v", p.currentItem.Token)
+		return nil
+	}
+
+	p.NextItem() // skip '('
+
+	var args []*NodeVariable
+Loop:
+	for {
+		if p.currentItem.Token == TOK_IDENTIFIER {
+			var varType, varName *NodeIdentifier
+			varType = NIdentifier(p.currentItem.Val)
+			p.NextItem()
+			if p.currentItem.Token == TOK_IDENTIFIER {
+				varName = NIdentifier(p.currentItem.Val)
+				p.NextItem()
+			}
+			variable := NVariable(varName, varType)
+			args = append(args, variable)
+		} else {
+			break Loop
+		}
+	}
+
+	if p.currentItem.Token != TOK_RPAREN {
+		p.RaiseError("Expected ')' in prototype, got %v", p.currentItem.Token)
+		return nil
+	}
+
+	p.NextItem() // skip ')'
+
+	typeName := NIdentifier("")
+	// handle return type
+	if p.currentItem.Token == TOK_IDENTIFIER {
+		typeName = NIdentifier(p.currentItem.Val)
+		p.NextItem()
+	}
+
+	return NPrototype(fName, typeName, args)
+}
+
+func (p *Parser) parseExtern() *NodePrototype {
+	p.NextItem() // skip extern keyword
+	if p.currentItem.Token != TOK_IDENTIFIER {
+		p.RaiseError("Expected function name in prototype, got %v", p.currentItem.Token)
+		return nil
+	}
+	fName := p.currentItem.Val
+	p.NextItem() // skip func name
+	return p.parsePrototype(fName)
+}
+
+func (p *Parser) parseStatement() NodeStmt {
+	identifierName := p.currentItem.Val
+	p.NextItem() // skip identifier
+
+	switch p.currentItem.Token {
+	case TOK_LPAREN: // function call
+		p.NextItem()
+		return NExprStmt(p.parseFunctionCall(identifierName))
+	case TOK_ASSIGN, TOK_ASSIGN_S: // variable or function definition
+		p.NextItem()
+		if p.currentItem.Token == TOK_FUNC {
+			return p.parseFunction(identifierName)
+		}
+
+		return p.parseAssign(identifierName)
+	case TOK_COMMENT:
+		p.NextItem() // skip comment
+		if p.currentItem.Token == TOK_IDENTIFIER {
+			return p.parseStatement()
+		}
+	}
+
+	p.RaiseError("Unexpected token '%v', expect function call or variable assignation", p.currentItem.Token)
+	return nil
+}
+
+/*
+func (p *Parser) parseTopExpression() *NodeFunction {
+	body := p.parseExpression()
+	proto := NPrototype(NIdentifier(""), NIdentifier(""), []*NodeVariable{})
+	return NFunction(proto, body)
+}
+
+func (p *Parser) handleExtern() {
+	if ast := p.parseExtern(); ast != nil {
+		Debug("Parsed an extern func:\n\t%q\n", ast)
+		f, err := ast.CodeGen(&p.Module, &p.Builder)
+		if err != nil {
+			p.RaiseError("%v", err)
+			return
+		}
+		DebugDump(f)
+	} else {
+		p.NextItem()
+	}
+}
+
+func (p *Parser) handleExpression() {
+	if ast := p.parseExpression(); ast != nil {
+		Debug("Parsed an expression:\n\t%q\n", ast)
+		f, err := ast.CodeGen(&p.Module, &p.Builder)
+		if err != nil {
+			p.RaiseError("%v", err)
+			return
+		}
+		DebugDump(f)
+	} else {
+		p.NextItem()
+	}
+}*/
+
+func (p *Parser) parseBlock() *NodeBlock {
+	var statements []NodeStmt
+	var stmt NodeStmt
+
+	p.depth++
+
+Loop:
+	for {
+		stmt = nil
+		switch p.currentItem.Token {
+		case TOK_EOF, TOK_LBLOCK:
+			break Loop
+		case TOK_EXTERN:
+			stmt = p.parseExtern()
+		case TOK_IDENTIFIER:
+			stmt = p.parseStatement()
+		case TOK_RETURN:
+			stmt = p.parseReturn()
+		case TOK_ENDL, TOK_COMMENT:
+			p.NextItem()
+		default:
+			p.RaiseError("Unexpected token '%v'", p.currentItem.Token)
+			break Loop
+		}
+
+		if stmt != nil {
+			Debug("STMT[%d]: %v\n", p.depth, stmt)
+			statements = append(statements, stmt)
+		}
+	}
+
+	p.depth--
+	return NBlock(statements)
+}
+
+func (p *Parser) Parse() (*NodeBlock, error) {
+	p.NextItem()           // get the first item
+	root := p.parseBlock() // parse top block
+
+	if p.errorCount == 1 {
+		return nil, fmt.Errorf("1 error")
+	}
+	if p.errorCount > 1 {
+		return nil, fmt.Errorf("%d errors", p.errorCount)
+	}
+	return root, nil
+}

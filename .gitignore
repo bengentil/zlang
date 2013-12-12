@@ -20,3 +20,14 @@ _cgo_export.*
 _testmain.go
 
 *.exe
+
+# Apple
+.DS_Store
+.AppleDouble
+.LSOverride
+
+._*
+
+# Files that might appear on external disk
+.Spotlight-V100
+.Trashes

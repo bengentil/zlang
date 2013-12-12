@@ -1,0 +1,134 @@
+// Copyright 2013 Benjamin Gentil. All rights reserved.
+// license can be found in the LICENSE file (MIT License)
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"github.com/axw/gollvm/llvm"
+	"github.com/bengentil/zlang"
+	"os"
+	"strings"
+)
+
+// gollvm working example
+func test() {
+	llvm.LinkInJIT()
+	llvm.InitializeNativeTarget()
+
+	mod := llvm.NewModule("fac_module")
+
+	// don't do that, because ExecutionEngine takes ownership over module
+	//defer mod.Dispose()
+
+	fac_args := []llvm.Type{llvm.Int32Type()}
+	fac_type := llvm.FunctionType(llvm.Int32Type(), fac_args, false)
+	fac := llvm.AddFunction(mod, "fac", fac_type)
+	fac.SetFunctionCallConv(llvm.CCallConv)
+	n := fac.Param(0)
+
+	entry := llvm.AddBasicBlock(fac, "entry")
+	iftrue := llvm.AddBasicBlock(fac, "iftrue")
+	iffalse := llvm.AddBasicBlock(fac, "iffalse")
+	end := llvm.AddBasicBlock(fac, "end")
+
+	builder := llvm.NewBuilder()
+	defer builder.Dispose()
+
+	builder.SetInsertPointAtEnd(entry)
+	If := builder.CreateICmp(llvm.IntEQ, n, llvm.ConstInt(llvm.Int32Type(), 0, false), "cmptmp")
+	builder.CreateCondBr(If, iftrue, iffalse)
+
+	builder.SetInsertPointAtEnd(iftrue)
+	res_iftrue := llvm.ConstInt(llvm.Int32Type(), 1, false)
+	builder.CreateBr(end)
+
+	builder.SetInsertPointAtEnd(iffalse)
+	n_minus := builder.CreateSub(n, llvm.ConstInt(llvm.Int32Type(), 1, false), "subtmp")
+	call_fac_args := []llvm.Value{n_minus}
+	call_fac := builder.CreateCall(fac, call_fac_args, "calltmp")
+	res_iffalse := builder.CreateMul(n, call_fac, "multmp")
+	builder.CreateBr(end)
+
+	builder.SetInsertPointAtEnd(end)
+	res := builder.CreatePHI(llvm.Int32Type(), "result")
+	phi_vals := []llvm.Value{res_iftrue, res_iffalse}
+	phi_blocks := []llvm.BasicBlock{iftrue, iffalse}
+	res.AddIncoming(phi_vals, phi_blocks)
+	builder.CreateRet(res)
+
+	err := llvm.VerifyModule(mod, llvm.ReturnStatusAction)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	engine, err := llvm.NewJITCompiler(mod, 2)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer engine.Dispose()
+
+	pass := llvm.NewPassManager()
+	defer pass.Dispose()
+
+	pass.Add(engine.TargetData())
+	pass.AddConstantPropagationPass()
+	pass.AddInstructionCombiningPass()
+	pass.AddPromoteMemoryToRegisterPass()
+	pass.AddGVNPass()
+	pass.AddCFGSimplificationPass()
+	pass.Run(mod)
+
+	mod.Dump()
+
+	exec_args := []llvm.GenericValue{llvm.NewGenericValueFromInt(llvm.Int32Type(), 10, false)}
+	exec_res := engine.RunFunction(fac, exec_args)
+	fmt.Println("-----------------------------------------")
+	fmt.Println("Running fac(10) with JIT...")
+	fmt.Printf("Result: %d\n", exec_res.Int(false))
+}
+
+var properties = make(map[string]bool)
+
+func main() {
+	test()
+
+	//properties = make(map)
+
+	properties["debug"] = false
+
+	for {
+		fmt.Fprintf(os.Stderr, "zlang> ")
+		stdin := bufio.NewReader(os.Stdin)
+		line, err := stdin.ReadString('\n')
+		if err != nil || strings.HasPrefix(line, "exit") {
+			break
+		}
+		if strings.HasPrefix(line, "set ") {
+			prop := line[4 : len(line)-1]
+			fmt.Fprintf(os.Stderr, "Setting property '%s'\n", prop)
+			properties[prop] = true
+		} else if strings.HasPrefix(line, "unset ") {
+			prop := line[6 : len(line)-1]
+			fmt.Fprintf(os.Stderr, "Remove property '%s'\n", prop)
+			properties[prop] = false
+		} else {
+
+			if properties["debug"] {
+				zlang.EnableDebug()
+			} else {
+				zlang.DisableDebug()
+			}
+
+			p := zlang.NewParser("stdin", line)
+			err := p.Parse()
+			if err != nil {
+				zlang.Errorln("%v", err)
+			}
+		}
+	}
+
+	zlang.Errorln(zlang.GreenCode + ":) Thanks for using zlang" + zlang.ResetCode)
+}
