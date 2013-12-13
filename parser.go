@@ -130,6 +130,9 @@ func (p *Parser) parsePrimary() NodeExpr {
 	switch p.currentItem.Token {
 	case TOK_IDENTIFIER:
 		return p.parseIdentifier()
+	case TOK_STRING:
+		p.NextItem()
+		return nil
 	case TOK_INT:
 		return p.parseInteger()
 	case TOK_LPAREN:
@@ -150,13 +153,13 @@ func (p *Parser) parseExpression() NodeExpr {
 	return p.parseBinOP(0, LHS)
 }
 
-func (p *Parser) parseAssign(varName string) *NodeExpStmt {
+func (p *Parser) parseVariable(varName string) *NodeVariable {
 	LHS := NIdentifier(varName)
 	RHS := p.parseExpression()
-	return NExprStmt(NAssignement(LHS, RHS))
+	return NVariable(LHS, nil, NAssignement(LHS, RHS))
 }
 
-func (p *Parser) parseFunctionCall(funcName string) *NodeCallExpr {
+func (p *Parser) parseFunctionCall(funcName string) *NodeCall {
 	var args []NodeExpr
 Loop:
 	for {
@@ -179,7 +182,7 @@ Loop:
 	}
 
 	p.NextItem() // skip ')'
-	return NCallExpr(NIdentifier(funcName), args)
+	return NCall(NIdentifier(funcName), args)
 }
 
 func (p *Parser) parseFunction(funcName string) *NodeFunction {
@@ -226,7 +229,7 @@ Loop:
 				varName = NIdentifier(p.currentItem.Val)
 				p.NextItem()
 			}
-			variable := NVariable(varName, varType)
+			variable := NVariable(varName, varType, nil)
 			args = append(args, variable)
 		} else {
 			break Loop
@@ -268,14 +271,14 @@ func (p *Parser) parseStatement() NodeStmt {
 	switch p.currentItem.Token {
 	case TOK_LPAREN: // function call
 		p.NextItem()
-		return NExprStmt(p.parseFunctionCall(identifierName))
+		return NExpression(p.parseFunctionCall(identifierName))
 	case TOK_ASSIGN, TOK_ASSIGN_S: // variable or function definition
 		p.NextItem()
 		if p.currentItem.Token == TOK_FUNC {
 			return p.parseFunction(identifierName)
 		}
 
-		return p.parseAssign(identifierName)
+		return p.parseVariable(identifierName)
 	case TOK_COMMENT:
 		p.NextItem() // skip comment
 		if p.currentItem.Token == TOK_IDENTIFIER {
@@ -335,7 +338,12 @@ Loop:
 		case TOK_EOF, TOK_LBLOCK:
 			break Loop
 		case TOK_EXTERN:
-			stmt = p.parseExtern()
+			if p.depth == 1 {
+				stmt = p.parseExtern()
+			} else {
+				p.RaiseError("Extern function can't be declared inside function")
+				break Loop
+			}
 		case TOK_IDENTIFIER:
 			stmt = p.parseStatement()
 		case TOK_RETURN:

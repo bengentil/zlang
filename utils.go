@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/axw/gollvm/llvm"
 	"os"
+	"strings"
 )
 
 const (
@@ -54,4 +55,10 @@ func EnableColor() {
 
 func DisableColor() {
 	fmt.Fprintf(os.Stderr, ResetCode)
+}
+
+// replace <nil> by null to have valid JSON
+// fix also array prepresentation by separating object with , instead of space
+func JNil(s string) string {
+	return strings.Replace(strings.Replace(s, "<nil>", "null", -1), "} {\"__type", "},{\"__type", -1)
 }
