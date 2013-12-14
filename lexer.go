@@ -141,11 +141,13 @@ func (l *Lexer) NextItem() LexItem {
 
 	// parse a string
 	if lastRune == StringDelim {
+		l.ignore() // skip opening "
 		for {
 			nextRune := l.peekRune()
 			if nextRune == StringDelim && lastRune != EscapeCar {
+				s := l.emit(TOK_STRING)
 				lastRune = l.getRune() // get the closing "
-				return l.emit(TOK_STRING)
+				return s
 			}
 			if nextRune == eof {
 				return l.emit_error("unclosed string %s", l.getVal())

@@ -96,7 +96,7 @@ func ExampleLexer() {
 	// ENDL 		 "\n"
 	// IDENTIFIER 		 "println"
 	// ( 		 "("
-	// STRING 		 "\"Hello, 世界"...
+	// STRING 		 "Hello, 世界"...
 	// ) 		 ")"
 	// COMMENT 		 "// support"...
 	// ENDL 		 "\n"
@@ -118,7 +118,7 @@ func ExampleLexer() {
 	// ENDL 		 "\n"
 	// IDENTIFIER 		 "println"
 	// ( 		 "("
-	// STRING 		 "\"FAILURE: "...
+	// STRING 		 "FAILURE: \\"...
 	// ) 		 ")"
 	// ENDL 		 "\n"
 	// } 		 "}"
@@ -127,7 +127,7 @@ func ExampleLexer() {
 	// ENDL 		 "\n"
 	// IDENTIFIER 		 "println"
 	// ( 		 "("
-	// STRING 		 "\"SUCCESS\""
+	// STRING 		 "SUCCESS"
 	// ) 		 ")"
 	// ENDL 		 "\n"
 	// } 		 "}"
