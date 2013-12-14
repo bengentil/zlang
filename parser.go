@@ -57,6 +57,7 @@ func (p *Parser) parseFloat() *NodeFloat {
 	return NFloat("0.0")
 }
 
+/*
 func (p *Parser) parseIdentifier() NodeExpr {
 
 	identifierName := p.currentItem.Val
@@ -77,12 +78,12 @@ func (p *Parser) parseIdentifier() NodeExpr {
 	}
 
 	if p.currentItem.Token == TOK_MUL {
-		return p.parseBinOP(0, NIdentifier(identifierName))
+		return NIdentifier(identifierName)//p.parseBinOP(0, )
 	}
 
 	p.RaiseError("Expected identifier, got %v", p.currentItem.Token)
 	return nil
-}
+}*/
 
 func (p *Parser) parseParen() NodeExpr {
 	p.NextItem() // skip '('
@@ -127,20 +128,32 @@ func (p *Parser) parseBinOP(prec int, LHS NodeExpr) NodeExpr {
 }
 
 func (p *Parser) parsePrimary() NodeExpr {
+	var result NodeExpr
+
 	switch p.currentItem.Token {
 	case TOK_IDENTIFIER:
-		return p.parseIdentifier()
+		identifierName := p.currentItem.Val
+		p.NextItem()
+		if p.currentItem.Token == TOK_LPAREN {
+			p.NextItem() // skip '('
+			return p.parseFunctionCall(identifierName)
+		}
+		return NIdentifier(identifierName)
 	case TOK_STRING:
-		p.NextItem()
-		return nil
+		result = NString(p.currentItem.Val)
 	case TOK_INT:
-		return p.parseInteger()
+		result = p.parseInteger()
 	case TOK_LPAREN:
-		return p.parseParen()
-	case TOK_RBLOCK:
-		p.NextItem()
+		result = p.parseParen()
+	case TOK_RBLOCK, TOK_RPAREN:
 		return nil
 	}
+
+	if result != nil {
+		p.NextItem()
+		return result
+	}
+
 	p.RaiseError("Expected expression, got %v", p.currentItem.Token)
 	return nil
 }
@@ -150,7 +163,23 @@ func (p *Parser) parseExpression() NodeExpr {
 	if LHS == nil {
 		return nil
 	}
-	return p.parseBinOP(0, LHS)
+
+Loop:
+	for {
+		switch p.currentItem.Token {
+		case TOK_MUL: // is operator
+			op := p.currentItem.Val
+			p.NextItem()
+			RHS := p.parseExpression()
+			LHS = NBinOp(op, LHS, RHS)
+		default:
+			break Loop
+		}
+		p.NextItem()
+	}
+
+	//return p.parseBinOP(0, LHS)*/
+	return LHS
 }
 
 func (p *Parser) parseVariable(varName string) *NodeVariable {
@@ -167,6 +196,7 @@ Loop:
 		if arg == nil {
 			return nil
 		}
+		//Debug("->arg:%v", arg)
 		args = append(args, arg)
 
 		if p.currentItem.Token == TOK_RPAREN {
@@ -270,7 +300,7 @@ func (p *Parser) parseStatement() NodeStmt {
 
 	switch p.currentItem.Token {
 	case TOK_LPAREN: // function call
-		p.NextItem()
+		p.NextItem() // skip '('
 		return NExpression(p.parseFunctionCall(identifierName))
 	case TOK_ASSIGN, TOK_ASSIGN_S: // variable or function definition
 		p.NextItem()
@@ -331,11 +361,26 @@ func (p *Parser) parseBlock() *NodeBlock {
 
 	p.depth++
 
+	if p.depth < 1 {
+		p.RaiseError("Unexpected depth %d, should be > 1", p.depth)
+		return nil
+	}
+
 Loop:
 	for {
 		stmt = nil
 		switch p.currentItem.Token {
-		case TOK_EOF, TOK_LBLOCK:
+		case TOK_RBLOCK:
+			// expected for depth != 1
+			if p.depth == 1 {
+				p.RaiseError("Unexpected '}' on top level block")
+			}
+			break Loop
+		case TOK_EOF:
+			// expected for depth == 1
+			if p.depth != 1 {
+				p.RaiseError("Unexpected end of file, missing '}'")
+			}
 			break Loop
 		case TOK_EXTERN:
 			if p.depth == 1 {
@@ -356,13 +401,13 @@ Loop:
 		}
 
 		if stmt != nil {
-			Debug("STMT[%d]: %v\n", p.depth, stmt)
+			//Debug("STMT[%d]: %v\n", p.depth, stmt)
 			statements = append(statements, stmt)
 		}
 	}
 
 	p.depth--
-	return NBlock(statements)
+	return NBlock(statements, p.depth+1)
 }
 
 func (p *Parser) Parse() (*NodeBlock, error) {

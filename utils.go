@@ -44,7 +44,11 @@ func Debug(f string, v ...interface{}) {
 func DebugDump(v *llvm.Value) {
 	if DEBUG {
 		EnableColor()
-		v.Dump()
+		if v != nil {
+			v.Dump()
+		} else {
+			Debug("<nil>\n")
+		}
 		DisableColor()
 	}
 }

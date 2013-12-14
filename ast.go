@@ -8,6 +8,8 @@ import (
 	"strconv"
 )
 
+//var NamedValues map[string]*llvm.Value
+
 type Node interface {
 	CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)
 }
@@ -22,26 +24,31 @@ type (
 	}
 
 	NodeInteger struct {
+		Node
 		NodeExpr
 		Value int
 	}
 
 	NodeFloat struct {
+		Node
 		NodeExpr
 		Value float32
 	}
 
 	NodeString struct {
+		Node
 		NodeExpr
 		Value string
 	}
 
 	NodeIdentifier struct {
+		Node
 		NodeExpr
 		Name string
 	}
 
 	NodeBinOperator struct {
+		Node
 		NodeExpr
 		Operator string
 		LHS      NodeExpr
@@ -49,20 +56,24 @@ type (
 	}
 
 	NodeAssignement struct {
+		Node
 		NodeExpr
 		LHS *NodeIdentifier
 		RHS NodeExpr
 	}
 
 	NodeCall struct {
+		Node
 		NodeExpr
 		Name *NodeIdentifier
 		Args []NodeExpr
 	}
 
 	NodeBlock struct {
+		Node
 		NodeExpr
 		Statements []NodeStmt
+		Depth      int
 	}
 )
 
@@ -102,27 +113,27 @@ func NCall(name *NodeIdentifier, args []NodeExpr) *NodeCall {
 	return &NodeCall{Name: name, Args: args}
 }
 
-func NBlock(stmts []NodeStmt) *NodeBlock {
-	return &NodeBlock{Statements: stmts}
+func NBlock(stmts []NodeStmt, depth int) *NodeBlock {
+	return &NodeBlock{Statements: stmts, Depth: depth}
 }
 
 //
 // Make nodes printable
 //
 func (n *NodeInteger) String() string {
-	return JNil(fmt.Sprintf("%v", n.Value))
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeInteger\",\"value\":%v}", n.Value))
 }
 
 func (n *NodeFloat) String() string {
-	return JNil(fmt.Sprintf("%v", n.Value))
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeFloat\",\"value\":%v}", n.Value))
 }
 
 func (n *NodeString) String() string {
-	return JNil(fmt.Sprintf("%q", n.Value))
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeString\",\"name\":%q}", n.Value))
 }
 
 func (n *NodeIdentifier) String() string {
-	return JNil(fmt.Sprintf("%q", n.Name))
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeIdentifier\",\"name\":%q}", n.Name))
 }
 
 func (n *NodeBinOperator) String() string {
@@ -138,7 +149,7 @@ func (n *NodeCall) String() string {
 }
 
 func (n *NodeBlock) String() string {
-	return JNil(fmt.Sprintf("{\"__type\":\"NodeBlock\",\"value\":%v}", n.Statements))
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeBlock\",\"statements\":%v,\"depth\":%d}", n.Statements, n.Depth))
 }
 
 // exprNode() ensures that only statement nodes can be
@@ -161,6 +172,7 @@ type (
 	}
 
 	NodePrototype struct {
+		Node
 		NodeStmt
 		Type *NodeIdentifier
 		Name *NodeIdentifier
@@ -168,22 +180,26 @@ type (
 	}
 
 	NodeFunction struct {
+		Node
 		NodeStmt
 		Proto *NodePrototype
 		Body  *NodeBlock
 	}
 
 	NodeReturn struct {
+		Node
 		NodeStmt
 		Value NodeExpr
 	}
 
 	NodeExpression struct {
+		Node
 		NodeStmt
 		Expression NodeExpr
 	}
 
 	NodeVariable struct {
+		Node
 		NodeStmt
 		Type       *NodeIdentifier
 		Name       *NodeIdentifier
@@ -235,7 +251,7 @@ func (n *NodeExpression) String() string {
 }
 
 func (n *NodeVariable) String() string {
-	return JNil(fmt.Sprintf("{\"__type\":\"NodeVariable\",\"name\":%v, \"type\":%v}", n.Name, n.Type))
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeVariable\",\"name\":%v,\"type\":%v,\"assign_expr\":%v}", n.Name, n.Type, n.AssignExpr))
 }
 
 // stmtNode() ensures that only statement nodes can be
@@ -249,14 +265,46 @@ func (n *NodeVariable) stmtNode()   {}
 // ********************************************
 // Code generation
 // ********************************************
-func (n *NodeInteger) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)     { return nil, nil }
-func (n *NodeFloat) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)       { return nil, nil }
-func (n *NodeIdentifier) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)  { return nil, nil }
-func (n *NodeBinOperator) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
+func (n *NodeInteger) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)    { return nil, nil }
+func (n *NodeFloat) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)      { return nil, nil }
+func (n *NodeString) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)     { return nil, nil }
+func (n *NodeIdentifier) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
+func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+	l, err := n.LHS.CodeGen()
+	r, err := n.RHS.CodeGen()
+
+	if l == nil || r == nil || err != nil {
+		return nil, err
+	}
+
+	switch n.Operator {
+	case "*":
+		return builder.CreateMul(l, r, "multmp"), nil
+	}
+	return nil, nil
+}
 func (n *NodeAssignement) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
 
-func (n *NodeBlock) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
-	return nil, nil
+func (n *NodeBlock) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+
+	/*blockName := "entry" // function block
+
+	if n.Depth == 1 { // root anonymous block
+		blockName = "rootblk"
+	}*/
+
+	var ret *llvm.Value
+
+	for _, s := range n.Statements {
+		ret, err := s.CodeGen(mod, builder)
+		if err != nil || ret == nil {
+			return ret, err
+		}
+		if n.Depth == 1 {
+			DebugDump(ret)
+		}
+	}
+	return ret, nil
 }
 
 func (n *NodeCall) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
@@ -289,7 +337,7 @@ func (n *NodeFunction) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 	entry := llvm.AddBasicBlock(*f, "entry")
 	builder.SetInsertPointAtEnd(entry)
 
-	retVal, err := n.Body.CodeGen(mod, builder)
+	_, err = n.Body.CodeGen(mod, builder)
 	if err != nil {
 		f.EraseFromParentAsFunction()
 		return nil, err
@@ -297,8 +345,17 @@ func (n *NodeFunction) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 
 	// TODO: use LLVM verifyFunction
 
-	builder.CreateRet(*retVal)
 	return f, nil
+}
+func (n *NodeReturn) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+
+	retVal, err := n.Value.CodeGen(mod, builder)
+	if err != nil || retVal == nil {
+		return nil, err
+	}
+	builder.CreateRet(*retVal)
+
+	return retVal, nil
 }
 func (n *NodeExpression) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
 func (n *NodeVariable) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)   { return nil, nil }

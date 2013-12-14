@@ -26,13 +26,13 @@ func ExampleParser() {
 
 		// result = square
 		result is square(2)
-		if result neq 4 {
+		/*if result neq 4 {
 			println("FAILURE: \"not 4\"")
 		} else {
 			println("SUCCESS")
-		}
+		}*/
 
-		return 0
+		return result
 	}
 
 
@@ -45,6 +45,8 @@ func ExampleParser() {
 		fmt.Println("error:", err)
 		return
 	}
+
+	fmt.Printf("%v\n\n", root)
 
 	code, err := root.CodeGen(&p.Module, &p.Builder)
 	if err != nil {
