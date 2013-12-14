@@ -152,22 +152,6 @@ var keywords map[string]Token
 var operators map[string]Token
 var delimiters map[string]Token
 
-// store token associations in maps
-func init() {
-	keywords = make(map[string]Token)
-	for i := keyword_begin + 1; i < keyword_end; i++ {
-		keywords[tokens[i]] = i
-	}
-	operators = make(map[string]Token)
-	for i := operator_begin + 1; i < operator_end; i++ {
-		operators[tokens[i]] = i
-	}
-	delimiters = make(map[string]Token)
-	for i := delimiter_begin + 1; i < delimiter_end; i++ {
-		delimiters[tokens[i]] = i
-	}
-}
-
 // identify if a string is an operator(is, not, and...), a keyword(if, for...) or an identifier
 func resolveIdentifier(identifier string) Token {
 	if tok_op, is_operator := operators[identifier]; is_operator {

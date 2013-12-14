@@ -8,7 +8,20 @@ import (
 	"strconv"
 )
 
-//var NamedValues map[string]*llvm.Value
+type ContextValue struct {
+	FunctionName string
+	VariableName string
+}
+
+var contextVariable map[ContextValue]*llvm.Value
+
+func getContextVariable(fName, varName string) *llvm.Value {
+	return contextVariable[ContextValue{fName, varName}]
+}
+
+func setContextVariable(fName, varName string, value *llvm.Value) {
+	contextVariable[ContextValue{fName, varName}] = value
+}
 
 type Node interface {
 	CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)
@@ -274,11 +287,17 @@ func (n *NodeFloat) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
 	f := llvm.ConstFloat(llvm.FloatType(), float64(n.Value))
 	return &f, nil
 }
-func (n *NodeString) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
-	s := llvm.ConstString(n.Value, false)
-	return &s, nil
+func (n *NodeString) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+	/*s := llvm.ConstString(n.Value, true)
+	gv := llvm.GlobalVariable()*/
+	s := builder.CreateGlobalString(n.Value, ".str")
+	v := llvm.ConstInBoundsGEP(s, []llvm.Value{llvm.ConstInt(llvm.Int32Type(), 0, false), llvm.ConstInt(llvm.Int32Type(), 0, false)})
+	return &v, nil
 }
-func (n *NodeIdentifier) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
+func (n *NodeIdentifier) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+	fName := mod.LastFunction().Name()
+	return getContextVariable(fName, n.Name), nil
+}
 func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
 	l, err := n.LHS.CodeGen(mod, builder)
 	r, err := n.RHS.CodeGen(mod, builder)
@@ -311,9 +330,6 @@ func (n *NodeBlock) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Valu
 		if err != nil {
 			return ret, err
 		}
-		if n.Depth == 1 {
-			DebugDump(ret)
-		}
 	}
 	return ret, nil
 }
@@ -337,7 +353,7 @@ func (n *NodeCall) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value
 		}
 		args = append(args, *v)
 	}
-	c := builder.CreateCall(f, args, "calltmp")
+	c := builder.CreateCall(f, args, "")
 	return &c, nil
 }
 
@@ -362,6 +378,7 @@ func (n *NodePrototype) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.
 		//fmt.Println(n.Args[i])
 		if n.Args[i].Name != nil {
 			param.SetName(n.Args[i].Name.Name)
+			setContextVariable(f_name, n.Args[i].Name.Name, &param)
 		}
 	}
 
@@ -383,7 +400,13 @@ func (n *NodeFunction) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 		return nil, err
 	}
 
-	// TODO: use LLVM verifyFunction
+	/*
+		TODO:
+		err = llvm.VerifyFunction(*f, llvm.PrintMessageAction)
+		if err != nil {
+			return f, err
+		}
+	*/
 
 	return f, nil
 }
@@ -393,6 +416,7 @@ func (n *NodeReturn) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Val
 	if err != nil || retVal == nil {
 		return nil, err
 	}
+	//DebugDump(retVal)
 	builder.CreateRet(*retVal)
 
 	return retVal, nil
@@ -404,9 +428,11 @@ func (n *NodeExpression) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm
 }
 
 func (n *NodeVariable) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
-	if n.AssignExpr.LHS.Value == nil { // variable not initialised
-		val := builder.CreateAlloca(llvm.Int32Type(), n.Name.Name)
-		n.AssignExpr.LHS.Value = &val
+	var lhs llvm.Value
+	fName := mod.LastFunction().Name()
+	if getContextVariable(fName, n.Name.Name) == nil { // variable not initialised
+		lhs = builder.CreateAlloca(llvm.Int32Type(), n.Name.Name)
+		setContextVariable(fName, n.Name.Name, &lhs)
 	}
 
 	rhs, err := n.AssignExpr.RHS.CodeGen(mod, builder)
@@ -414,6 +440,8 @@ func (n *NodeVariable) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 		return nil, nil
 	}
 
-	v := builder.CreateStore(*n.AssignExpr.LHS.Value, *rhs)
+	v := builder.CreateStore(*rhs, lhs)
+	lhs_load := builder.CreateLoad(lhs, n.Name.Name)
+	setContextVariable(fName, n.Name.Name, &lhs_load)
 	return &v, nil
 }

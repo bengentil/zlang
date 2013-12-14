@@ -53,6 +53,18 @@ func DebugDump(v *llvm.Value) {
 	}
 }
 
+func DebugDumpMod(m *llvm.Module) {
+	if DEBUG {
+		EnableColor()
+		if m != nil {
+			m.Dump()
+		} else {
+			Debug("<nil>\n")
+		}
+		DisableColor()
+	}
+}
+
 func EnableColor() {
 	fmt.Fprintf(os.Stderr, YellowCode)
 }
