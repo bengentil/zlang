@@ -48,12 +48,12 @@ func ExampleParser() {
 
 	fmt.Printf("%v\n\n", root)
 
-	code, err := root.CodeGen(&p.Module, &p.Builder)
+	_, err = root.CodeGen(&p.Module, &p.Builder)
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
-	DebugDump(code)
+	p.Module.Dump()
 
 	// output:
 	//

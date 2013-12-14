@@ -44,7 +44,8 @@ type (
 	NodeIdentifier struct {
 		Node
 		NodeExpr
-		Name string
+		Name  string
+		Value *llvm.Value
 	}
 
 	NodeBinOperator struct {
@@ -265,13 +266,22 @@ func (n *NodeVariable) stmtNode()   {}
 // ********************************************
 // Code generation
 // ********************************************
-func (n *NodeInteger) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)    { return nil, nil }
-func (n *NodeFloat) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)      { return nil, nil }
-func (n *NodeString) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)     { return nil, nil }
+func (n *NodeInteger) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
+	i := llvm.ConstInt(llvm.Int32Type(), uint64(n.Value), false)
+	return &i, nil
+}
+func (n *NodeFloat) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
+	f := llvm.ConstFloat(llvm.FloatType(), float64(n.Value))
+	return &f, nil
+}
+func (n *NodeString) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
+	s := llvm.ConstString(n.Value, false)
+	return &s, nil
+}
 func (n *NodeIdentifier) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
 func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
-	l, err := n.LHS.CodeGen()
-	r, err := n.RHS.CodeGen()
+	l, err := n.LHS.CodeGen(mod, builder)
+	r, err := n.RHS.CodeGen(mod, builder)
 
 	if l == nil || r == nil || err != nil {
 		return nil, err
@@ -279,7 +289,8 @@ func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llv
 
 	switch n.Operator {
 	case "*":
-		return builder.CreateMul(l, r, "multmp"), nil
+		res := builder.CreateMul(*l, *r, "multmp")
+		return &res, nil
 	}
 	return nil, nil
 }
@@ -297,7 +308,7 @@ func (n *NodeBlock) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Valu
 
 	for _, s := range n.Statements {
 		ret, err := s.CodeGen(mod, builder)
-		if err != nil || ret == nil {
+		if err != nil {
 			return ret, err
 		}
 		if n.Depth == 1 {
@@ -307,7 +318,28 @@ func (n *NodeBlock) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Valu
 	return ret, nil
 }
 
-func (n *NodeCall) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
+func (n *NodeCall) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+	var args []llvm.Value
+
+	if n.Name == nil {
+		return nil, fmt.Errorf("Empty identifier")
+	}
+
+	f := mod.NamedFunction(n.Name.Name)
+	/*if f == nil {
+		return nil, fmt.Errorf("Function %s not found", n.Name.Name)
+	}*/
+
+	for _, exp := range n.Args {
+		v, err := exp.CodeGen(mod, builder)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, *v)
+	}
+	c := builder.CreateCall(f, args, "calltmp")
+	return &c, nil
+}
 
 func (n *NodePrototype) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
 	var f_args []llvm.Type
@@ -323,6 +355,14 @@ func (n *NodePrototype) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.
 	if f.Name() != f_name {
 		f.EraseFromParentAsFunction()
 		return nil, fmt.Errorf("Redefinition of function %s", f_name)
+	}
+
+	// set args name
+	for i, param := range f.Params() {
+		//fmt.Println(n.Args[i])
+		if n.Args[i].Name != nil {
+			param.SetName(n.Args[i].Name.Name)
+		}
 	}
 
 	return &f, nil
@@ -357,5 +397,23 @@ func (n *NodeReturn) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Val
 
 	return retVal, nil
 }
-func (n *NodeExpression) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
-func (n *NodeVariable) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error)   { return nil, nil }
+
+func (n *NodeExpression) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+	exp, err := n.Expression.CodeGen(mod, builder)
+	return exp, err
+}
+
+func (n *NodeVariable) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+	if n.AssignExpr.LHS.Value == nil { // variable not initialised
+		val := builder.CreateAlloca(llvm.Int32Type(), n.Name.Name)
+		n.AssignExpr.LHS.Value = &val
+	}
+
+	rhs, err := n.AssignExpr.RHS.CodeGen(mod, builder)
+	if err != nil {
+		return nil, nil
+	}
+
+	v := builder.CreateStore(*n.AssignExpr.LHS.Value, *rhs)
+	return &v, nil
+}
