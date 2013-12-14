@@ -169,7 +169,7 @@ func (t Token) Precedence() int {
 		return 3
 	case TOK_PLUS, TOK_MINUS:
 		return 4
-	case TOK_MUL:
+	case TOK_MUL, TOK_DIV:
 		return 5
 	}
 	return 0

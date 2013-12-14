@@ -167,7 +167,7 @@ func (p *Parser) parseExpression() NodeExpr {
 Loop:
 	for {
 		switch p.currentItem.Token {
-		case TOK_MUL: // is operator
+		case TOK_MUL, TOK_DIV, TOK_PLUS, TOK_MINUS: // is operator
 			op := p.currentItem.Val
 			p.NextItem()
 			RHS := p.parseExpression()
