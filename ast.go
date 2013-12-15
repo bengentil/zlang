@@ -253,8 +253,8 @@ func NVariable(name, typ *NodeIdentifier, assign *NodeAssignement) *NodeVariable
 	return &NodeVariable{Name: name, Type: typ, AssignExpr: assign}
 }
 
-func NIf(cond NodeExpr, elif []*NodeBlock, els *NodeBlock) {
-
+func NIf(cond NodeExpr, body *NodeBlock, elif []*NodeBlock, els *NodeBlock) *NodeIf {
+	return &NodeIf{Condition: cond, Body: body, Elif: elif, Else: els}
 }
 
 //
@@ -282,7 +282,7 @@ func (n *NodeVariable) String() string {
 }
 
 func (n *NodeIf) String() string {
-	return JNil(fmt.Sprintf("{\"__type\":\"NodeIf\",\"body\":%v,\"elif\":%v,\"else\":%v}", n.Body, n.Elif, n.Else))
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeIf\",\"condition\":%v,\"body\":%v,\"elif\":%v,\"else\":%v}", n.Condition, n.Body, n.Elif, n.Else))
 }
 
 // stmtNode() ensures that only statement nodes can be

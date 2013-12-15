@@ -9,10 +9,13 @@ import (
 func ExampleLexer() {
 
 	src := `
+
 	/*
 		1st Hello world script in zlang
 	*/
-	extern println(string)
+	extern puts(string)
+
+	extern fib_c(int, int, int) int
 
 	// pointer support
 	extern foo(@int) @
@@ -22,18 +25,21 @@ func ExampleLexer() {
 	}
 
 	main is func() int {
-		println("Hello, 世界") // support UTF-8 encoding
+		puts("Hello, 世界") // support UTF-8 encoding
 
 		// result = square
 		result is square(2)
-		if result neq 4 {
+		/*if result neq 4 {
 			println("FAILURE: \"not 4\"")
 		} else {
 			println("SUCCESS")
-		}
+		}*/
 
-		return 0
+		fib_c(4, 1, 0)
+
+		return result
 	}
+
 
 
 	`

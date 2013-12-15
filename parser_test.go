@@ -14,8 +14,10 @@ var src = `
 	*/
 	extern puts(string)
 
+	extern fib_c(int, int, int) int
+
 	// pointer support
-	//extern foo(@int) @
+	extern foo(@int) @
 
 	square is func(int x) int {
 		return x*x
@@ -26,11 +28,13 @@ var src = `
 
 		// result = square
 		result is square(2)
-		/*if result neq 4 {
+		if result neq 4 {
 			println("FAILURE: \"not 4\"")
 		} else {
 			println("SUCCESS")
-		}*/
+		}
+
+		//fib_c(4, 1, 0)
 
 		return result
 	}

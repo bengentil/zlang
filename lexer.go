@@ -190,8 +190,16 @@ func (l *Lexer) NextItem() LexItem {
 		return l.emit(TOK_LBLOCK)
 	case RightBlockDelim:
 		return l.emit(TOK_RBLOCK)
+	case ',':
+		return l.emit(TOK_COMMA)
 	case '*':
 		return l.emit(TOK_MUL)
+	case '+':
+		return l.emit(TOK_PLUS)
+	case '-':
+		return l.emit(TOK_MINUS)
+	case '/':
+		return l.emit(TOK_DIV)
 	case eof:
 		return l.emit(TOK_EOF)
 	}

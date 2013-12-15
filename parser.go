@@ -167,15 +167,16 @@ func (p *Parser) parseExpression() NodeExpr {
 Loop:
 	for {
 		switch p.currentItem.Token {
-		case TOK_MUL, TOK_DIV, TOK_PLUS, TOK_MINUS: // is operator
+		case TOK_MUL, TOK_DIV, TOK_PLUS, TOK_MINUS, TOK_NEQ_S: // is operator
 			op := p.currentItem.Val
 			p.NextItem()
 			RHS := p.parseExpression()
 			LHS = NBinOp(op, LHS, RHS)
+			//p.NextItem()
 		default:
 			break Loop
 		}
-		p.NextItem()
+		fmt.Println(p.currentItem.Token)
 	}
 
 	//return p.parseBinOP(0, LHS)*/
@@ -186,6 +187,79 @@ func (p *Parser) parseVariable(varName string) *NodeVariable {
 	LHS := NIdentifier(varName)
 	RHS := p.parseExpression()
 	return NVariable(LHS, nil, NAssignement(LHS, RHS))
+}
+
+func (p *Parser) parseIf() *NodeIf {
+	p.NextItem() // skip if keyword
+
+	condition := p.parseExpression()
+
+	fmt.Println(condition)
+
+	if p.currentItem.Token != TOK_LBLOCK {
+		p.RaiseError("Expected if body '{', got %v", p.currentItem.Token)
+		return nil
+	}
+
+	// if
+	p.NextItem() // skip left block
+	body := p.parseBlock()
+	p.NextItem() // skip right block
+
+	var elif []*NodeBlock
+	var els *NodeBlock
+
+	if p.currentItem.Token == TOK_ELSE {
+		p.NextItem() // skip else
+
+		// else if
+		if p.currentItem.Token == TOK_IF {
+		Loop:
+			for {
+				p.NextItem() // skip if
+
+				if p.currentItem.Token != TOK_LBLOCK {
+					p.RaiseError("Expected else if body '{', got %v", p.currentItem.Token)
+					return nil
+				}
+				p.NextItem() // skip left block
+
+				e := p.parseBlock()
+				elif = append(elif, e)
+
+				if p.currentItem.Token != TOK_RBLOCK {
+					p.RaiseError("Expected else if '}', got %v", p.currentItem.Token)
+					return nil
+				}
+				p.NextItem() // skip right block
+
+				if p.currentItem.Token != TOK_ELSE {
+					return NIf(condition, body, elif, els)
+				}
+
+				if p.currentItem.Token != TOK_IF {
+					break Loop
+				}
+			}
+		}
+
+		// else
+		if p.currentItem.Token != TOK_LBLOCK {
+			p.RaiseError("Expected else body '{', got %v", p.currentItem.Token)
+			return nil
+		}
+
+		p.NextItem() // skip left block
+		els = p.parseBlock()
+
+		if p.currentItem.Token != TOK_RBLOCK {
+			p.RaiseError("Expected else '}', got %v", p.currentItem.Token)
+			return nil
+		}
+		p.NextItem() // skip right block
+	}
+
+	return NIf(condition, body, elif, els)
 }
 
 func (p *Parser) parseFunctionCall(funcName string) *NodeCall {
@@ -261,9 +335,16 @@ Loop:
 			}
 			variable := NVariable(varName, varType, nil)
 			args = append(args, variable)
+
+			if p.currentItem.Token == TOK_COMMA {
+				p.NextItem() // skip ,
+			} else {
+				break Loop
+			}
 		} else {
 			break Loop
 		}
+
 	}
 
 	if p.currentItem.Token != TOK_RPAREN {
@@ -395,6 +476,8 @@ Loop:
 			stmt = p.parseReturn()
 		case TOK_ENDL, TOK_COMMENT:
 			p.NextItem()
+		case TOK_IF:
+			stmt = p.parseIf()
 		default:
 			p.RaiseError("Unexpected token '%v'", p.currentItem.Token)
 			break Loop
