@@ -41,12 +41,23 @@ Example:
 ```
 
 Running:
---------
+-------------------------
 
 ``` bash
+
+# with compiler
+$ zlc -o hello hello_world.zl 
+$ ./hello
+Hello, 世界
+SUCCESS
+
+
+# with interpreter
 $ cat hello_world.zl | zlang
 Hello, 世界
 SUCCESS
+
+
 ```
 
 Debugging Bytecode
@@ -54,8 +65,8 @@ Debugging Bytecode
 
 ``` bash
 # Dump bytecode
-$ cat hello_world.zl | zlang -emit-llvm
-	; ModuleID = 'stdin'
+$ zlc --emit-llvm hello_world.zl 
+	; ModuleID = 'hello_world.zl'
 
 	@.str = private unnamed_addr constant [20 x i8] c"Hello World, \E4\B8\96\E7\95\8C\00", align 1
 	@.str1 = private unnamed_addr constant [17 x i8] c"FAILURE: \22not 4\22\00", align 1
@@ -104,6 +115,15 @@ Status
 Zlang is at **early alpha stage** and is for educational purposes only (**don't implement real-world application with Zlang**)
 
 - [x] Lexer
-- [ ] Parser (In progress)
+- [x] Parser
 - [ ] JIT Interpreter (In progress)
-- [ ] Compiler
+- [x] Compiler
+
+Language features:
+- [x] Functions
+- [x] Extern functions (C bindings)
+- [x] Variable assignation
+- [-] Mutable Variables (To be tested)
+- [-] Pointers (To be tested)
+- [ ] Conditions (if/else) (In progress)
+- [ ] Loops (for)

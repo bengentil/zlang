@@ -219,6 +219,15 @@ type (
 		Name       *NodeIdentifier
 		AssignExpr *NodeAssignement
 	}
+
+	NodeIf struct {
+		Node
+		NodeStmt
+		Condition NodeExpr
+		Body      *NodeBlock
+		Elif      []*NodeBlock // TODO: support for else if
+		Else      *NodeBlock
+	}
 )
 
 //
@@ -242,6 +251,10 @@ func NExpression(exp NodeExpr) *NodeExpression {
 
 func NVariable(name, typ *NodeIdentifier, assign *NodeAssignement) *NodeVariable {
 	return &NodeVariable{Name: name, Type: typ, AssignExpr: assign}
+}
+
+func NIf(cond NodeExpr, elif []*NodeBlock, els *NodeBlock) {
+
 }
 
 //
@@ -268,6 +281,10 @@ func (n *NodeVariable) String() string {
 	return JNil(fmt.Sprintf("{\"__type\":\"NodeVariable\",\"name\":%v,\"type\":%v,\"assign_expr\":%v}", n.Name, n.Type, n.AssignExpr))
 }
 
+func (n *NodeIf) String() string {
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeIf\",\"body\":%v,\"elif\":%v,\"else\":%v}", n.Body, n.Elif, n.Else))
+}
+
 // stmtNode() ensures that only statement nodes can be
 // assigned to a NodeStmt.
 func (n *NodePrototype) stmtNode()  {}
@@ -275,6 +292,7 @@ func (n *NodeFunction) stmtNode()   {}
 func (n *NodeReturn) stmtNode()     {}
 func (n *NodeExpression) stmtNode() {}
 func (n *NodeVariable) stmtNode()   {}
+func (n *NodeIf) stmtNode()         {}
 
 // ********************************************
 // Code generation
@@ -400,13 +418,10 @@ func (n *NodeFunction) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 		return nil, err
 	}
 
-	/*
-		TODO:
-		err = llvm.VerifyFunction(*f, llvm.PrintMessageAction)
-		if err != nil {
-			return f, err
-		}
-	*/
+	err = llvm.VerifyFunction(*f, llvm.PrintMessageAction)
+	if err != nil {
+		return f, err
+	}
 
 	return f, nil
 }
@@ -445,3 +460,5 @@ func (n *NodeVariable) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 	setContextVariable(fName, n.Name.Name, &lhs_load)
 	return &v, nil
 }
+
+func (n *NodeIf) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }

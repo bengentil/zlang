@@ -26,11 +26,11 @@ var src = `
 
 		// result = square
 		result is square(2)
-		if result neq 4 {
+		/*if result neq 4 {
 			println("FAILURE: \"not 4\"")
 		} else {
 			println("SUCCESS")
-		}
+		}*/
 
 		return result
 	}

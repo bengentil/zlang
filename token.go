@@ -165,7 +165,7 @@ func resolveIdentifier(identifier string) Token {
 
 func (t Token) Precedence() int {
 	switch t {
-	case TOK_EQUAL, TOK_EQUAL_S, TOK_GE, TOK_GE_S:
+	case TOK_EQUAL, TOK_EQUAL_S, TOK_NEQ, TOK_NEQ_S, TOK_LT, TOK_LT_S, TOK_LE, TOK_LE_S, TOK_GT, TOK_GT_S, TOK_GE, TOK_GE_S:
 		return 3
 	case TOK_PLUS, TOK_MINUS:
 		return 4
