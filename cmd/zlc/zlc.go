@@ -172,7 +172,7 @@ func zlc(in *InputFile) error {
 	}
 
 	if !options.Force {
-		verbose("--> bytecode verification", in.Name)
+		verbose("--> bytecode verification")
 		err = llvm.VerifyModule(parser.Module, llvm.ReturnStatusAction)
 		if err != nil {
 			return err

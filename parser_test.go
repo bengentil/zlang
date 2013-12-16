@@ -48,6 +48,7 @@ var src = `
 
 		result is square(4)/square(2)
 
+		printi((2+square(2))*3) // 18
 		printi(square(2)*3) // 12
 		printi(2+square(2)*3) // 14
 		printi(square(2)/2+4*2) // 10

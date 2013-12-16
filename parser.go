@@ -95,7 +95,7 @@ func (p *Parser) parseParen() NodeExpr {
 		p.RaiseError("Expected ')', got %v", p.currentItem.Token)
 		return nil
 	}
-	p.NextItem() // skip ')'
+	//p.NextItem() // skip ')'
 	return exp
 }
 
@@ -182,6 +182,7 @@ Loop:
 		}
 	}
 
+	//Debug("LHS: %v\nTOken: %v\n", LHS, p.currentItem.Token)
 	//return p.parseBinOP(0, LHS)*/
 	return LHS
 }
@@ -271,7 +272,7 @@ Loop:
 		if arg == nil {
 			return nil
 		}
-		//Debug("->arg:%v", arg)
+		//Debug("->arg:%v\n", arg)
 		args = append(args, arg)
 
 		if p.currentItem.Token == TOK_RPAREN {
