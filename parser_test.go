@@ -14,6 +14,7 @@ var src = `
 	*/
 	extern puts(string)
 
+	extern printi(int)
 	extern fib_c(int, int, int) int
 
 	// pointer support
@@ -21,6 +22,16 @@ var src = `
 
 	square is func(int x) int {
 		return x*x
+	}
+
+	fib is func(int n, int fn1, int fn) int {
+		if n eq 0 {
+			return fn
+		} else {
+			return fib_c(n-1, fn, fn + fn1)
+		}
+
+		return 0
 	}
 
 	main is func() int {
@@ -34,7 +45,11 @@ var src = `
 			puts("SUCCESS")
 		}
 
-		//fib_c(4, 1, 0)
+		printi(square(2)*3) // 12
+		printi(2+square(2)*3) // 14
+		printi(square(2)/2+4*2) // 10
+		printi(fib_c(square(fib_c(2, 0, 1)), 0, 1)) // 5
+		printi(fib(square(fib_c(2, 0, 1)), 0, 1)) // 5
 
 		return result
 	}

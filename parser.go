@@ -101,14 +101,17 @@ func (p *Parser) parseParen() NodeExpr {
 
 func (p *Parser) parseBinOP(prec int, LHS NodeExpr) NodeExpr {
 	for {
+		//fmt.Println(p.currentItem.Val)
 		tok_prec := p.currentItem.Token.Precedence()
 
+		//fmt.Printf("Token : %v", LHS)
 		if tok_prec < prec {
+			fmt.Printf("LHS: %v", LHS)
 			return LHS
 		}
 
-		op := p.currentItem.Token.String()
-		p.NextItem()
+		op := p.currentItem.Val
+		p.NextItem() // skip operator
 		RHS := p.parsePrimary()
 		if RHS == nil {
 			return nil
@@ -123,6 +126,7 @@ func (p *Parser) parseBinOP(prec int, LHS NodeExpr) NodeExpr {
 		}
 
 		LHS = NBinOp(op, LHS, RHS)
+
 	}
 	return nil
 }
@@ -168,10 +172,10 @@ Loop:
 	for {
 		switch p.currentItem.Token {
 		case TOK_MUL, TOK_DIV, TOK_PLUS, TOK_MINUS, TOK_NEQ_S, TOK_EQUAL_S: // is operator
-			op := p.currentItem.Val
-			p.NextItem()
-			RHS := p.parseExpression()
-			LHS = NBinOp(op, LHS, RHS)
+			//op := p.currentItem.Val
+			//p.NextItem()
+			//RHS := p.parseExpression()
+			LHS = p.parseBinOP(1, LHS)
 			//p.NextItem()
 		default:
 			break Loop
