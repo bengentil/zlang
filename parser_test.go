@@ -29,9 +29,9 @@ var src = `
 		// result = square
 		result is square(2)
 		if result neq 4 {
-			println("FAILURE: \"not 4\"")
+			puts("FAILURE: \"not 4\"")
 		} else {
-			println("SUCCESS")
+			puts("SUCCESS")
 		}
 
 		//fib_c(4, 1, 0)

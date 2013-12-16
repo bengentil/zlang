@@ -167,7 +167,7 @@ func (p *Parser) parseExpression() NodeExpr {
 Loop:
 	for {
 		switch p.currentItem.Token {
-		case TOK_MUL, TOK_DIV, TOK_PLUS, TOK_MINUS, TOK_NEQ_S: // is operator
+		case TOK_MUL, TOK_DIV, TOK_PLUS, TOK_MINUS, TOK_NEQ_S, TOK_EQUAL_S: // is operator
 			op := p.currentItem.Val
 			p.NextItem()
 			RHS := p.parseExpression()
@@ -176,7 +176,6 @@ Loop:
 		default:
 			break Loop
 		}
-		fmt.Println(p.currentItem.Token)
 	}
 
 	//return p.parseBinOP(0, LHS)*/
@@ -193,8 +192,6 @@ func (p *Parser) parseIf() *NodeIf {
 	p.NextItem() // skip if keyword
 
 	condition := p.parseExpression()
-
-	fmt.Println(condition)
 
 	if p.currentItem.Token != TOK_LBLOCK {
 		p.RaiseError("Expected if body '{', got %v", p.currentItem.Token)

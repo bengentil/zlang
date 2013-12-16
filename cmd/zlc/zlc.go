@@ -62,6 +62,7 @@ type Options struct {
 	LlcBin     string `long:"llc-bin" description:"llc command to execute" default:"llc"`
 	ClangBin   string `long:"clang-bin" description:"clang command to execute" default:"clang"`
 	NoLink     bool   `short:"c" description:"don't link (produce object file)" default:"false"`
+	Force      bool   `short:"f" description:"force compilation" default:"false"`
 	Output     string `short:"o" long:"output" description:"output file" default:"a.out"`
 }
 
@@ -168,6 +169,13 @@ func zlc(in *InputFile) error {
 		fmt.Printf("--> %s:\n", in.Name)
 		parser.Module.Dump()
 		return nil
+	}
+
+	if !options.Force {
+		err = llvm.VerifyModule(parser.Module, llvm.ReturnStatusAction)
+		if err != nil {
+			return err
+		}
 	}
 
 	out, err := os.Create(in.Name)

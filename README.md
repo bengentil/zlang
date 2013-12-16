@@ -125,5 +125,5 @@ Language features:
 - [x] Variable assignation
 - [-] Mutable Variables (To be tested)
 - [-] Pointers (To be tested)
-- [ ] Conditions (if/else) (In progress)
+- [x] Conditions (if/else)
 - [ ] Loops (for)

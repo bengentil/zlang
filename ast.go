@@ -324,9 +324,26 @@ func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llv
 		return nil, err
 	}
 
+	// TODO: check difference between CreateMul, CreateFMul
+	// CreateUDiv, CreateSDiv
 	switch n.Operator {
 	case "*":
 		res := builder.CreateMul(*l, *r, "multmp")
+		return &res, nil
+	case "/":
+		res := builder.CreateUDiv(*l, *r, "divtmp")
+		return &res, nil
+	case "+":
+		res := builder.CreateAdd(*l, *r, "addtmp")
+		return &res, nil
+	case "-":
+		res := builder.CreateSub(*l, *r, "subtmp")
+		return &res, nil
+	case "eq":
+		res := builder.CreateICmp(llvm.IntEQ, *l, *r, "cmptmp")
+		return &res, nil
+	case "neq":
+		res := builder.CreateICmp(llvm.IntNE, *l, *r, "cmptmp")
 		return &res, nil
 	}
 	return nil, nil
@@ -360,9 +377,9 @@ func (n *NodeCall) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value
 	}
 
 	f := mod.NamedFunction(n.Name.Name)
-	/*if f == nil {
+	if f.IsNil() {
 		return nil, fmt.Errorf("Function %s not found", n.Name.Name)
-	}*/
+	}
 
 	for _, exp := range n.Args {
 		v, err := exp.CodeGen(mod, builder)
@@ -418,10 +435,10 @@ func (n *NodeFunction) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 		return nil, err
 	}
 
-	err = llvm.VerifyFunction(*f, llvm.PrintMessageAction)
+	/*err = llvm.VerifyFunction(*f, llvm.PrintMessageAction)
 	if err != nil {
 		return f, err
-	}
+	}*/
 
 	return f, nil
 }
@@ -461,4 +478,45 @@ func (n *NodeVariable) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 	return &v, nil
 }
 
-func (n *NodeIf) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
+func (n *NodeIf) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+	cond, err := n.Condition.CodeGen(mod, builder)
+	if err != nil || cond == nil {
+		return nil, err
+	}
+
+	f := builder.GetInsertBlock().Parent()
+
+	ifblk := llvm.AddBasicBlock(f, "ifcond")
+	elseblk := llvm.AddBasicBlock(f, "else")
+	endif := llvm.AddBasicBlock(f, "endif")
+
+	builder.CreateCondBr(*cond, ifblk, elseblk)
+
+	builder.SetInsertPointAtEnd(ifblk)
+	body, err := n.Body.CodeGen(mod, builder)
+	if err != nil {
+		return nil, err
+	}
+	ifblk = builder.GetInsertBlock()
+
+	if ifblk.LastInstruction().IsATerminatorInst().IsNil() {
+		builder.CreateBr(endif)
+	}
+
+	DebugDump(body)
+
+	builder.SetInsertPointAtEnd(elseblk)
+	els, err := n.Else.CodeGen(mod, builder)
+	if err != nil {
+		return nil, err
+	}
+	DebugDump(els)
+
+	elseblk = builder.GetInsertBlock()
+	if elseblk.LastInstruction().IsATerminatorInst().IsNil() {
+		builder.CreateBr(endif)
+	}
+
+	builder.SetInsertPointAtEnd(endif)
+	return cond, nil
+}
