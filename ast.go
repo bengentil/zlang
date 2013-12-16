@@ -314,7 +314,8 @@ func (n *NodeString) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Val
 }
 func (n *NodeIdentifier) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
 	fName := mod.LastFunction().Name()
-	return getContextVariable(fName, n.Name), nil
+	v := builder.CreateLoad(*getContextVariable(fName, n.Name), n.Name)
+	return &v, nil
 }
 func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
 	l, err := n.LHS.CodeGen(mod, builder)
@@ -413,7 +414,6 @@ func (n *NodePrototype) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.
 		//fmt.Println(n.Args[i])
 		if n.Args[i].Name != nil {
 			param.SetName(n.Args[i].Name.Name)
-			setContextVariable(f_name, n.Args[i].Name.Name, &param)
 		}
 	}
 
@@ -428,6 +428,13 @@ func (n *NodeFunction) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 
 	entry := llvm.AddBasicBlock(*f, "entry")
 	builder.SetInsertPointAtEnd(entry)
+
+	// alloc mem for params
+	for _, param := range f.Params() {
+		alloc := builder.CreateAlloca(param.Type(), param.Name())
+		builder.CreateStore(param, alloc)
+		setContextVariable(f.Name(), param.Name(), &alloc)
+	}
 
 	_, err = n.Body.CodeGen(mod, builder)
 	if err != nil {
@@ -473,8 +480,8 @@ func (n *NodeVariable) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 	}
 
 	v := builder.CreateStore(*rhs, lhs)
-	lhs_load := builder.CreateLoad(lhs, n.Name.Name)
-	setContextVariable(fName, n.Name.Name, &lhs_load)
+	/*lhs_load := builder.CreateLoad(lhs, n.Name.Name)
+	setContextVariable(fName, n.Name.Name, &lhs_load)*/
 	return &v, nil
 }
 

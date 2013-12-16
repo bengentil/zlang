@@ -106,7 +106,7 @@ func (p *Parser) parseBinOP(prec int, LHS NodeExpr) NodeExpr {
 
 		//fmt.Printf("Token : %v", LHS)
 		if tok_prec < prec {
-			fmt.Printf("LHS: %v", LHS)
+			//fmt.Printf("LHS: %v", LHS)
 			return LHS
 		}
 
