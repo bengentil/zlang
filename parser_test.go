@@ -18,7 +18,7 @@ var src = `
 	extern fib_c(int, int, int) int
 
 	// pointer support
-	extern foo(@int) @
+	//extern foo(@int) @
 
 	square is func(int x) int {
 		return x*x
@@ -28,7 +28,7 @@ var src = `
 		if n eq 0 {
 			return fn
 		} else {
-			return fib_c(n-1, fn, fn + fn1)
+			return fib(n-1, fn, fn + fn1)
 		}
 
 		return 0
@@ -41,16 +41,18 @@ var src = `
 		result is square(2)
 		if result neq 4 {
 			puts("FAILURE: \"not 4\"")
+			printi(result)
 		} else {
 			puts("SUCCESS")
 		}
+
+		result is square(4)/square(2)
 
 		printi(square(2)*3) // 12
 		printi(2+square(2)*3) // 14
 		printi(square(2)/2+4*2) // 10
 		printi(fib_c(square(fib_c(2, 0, 1)), 0, 1)) // 5
 		printi(fib(square(fib_c(2, 0, 1)), 0, 1)) // 5
-
 		return result
 	}
 

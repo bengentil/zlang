@@ -183,6 +183,7 @@ type (
 	NodeStmt interface {
 		Node
 		stmtNode()
+		String() string
 	}
 
 	NodePrototype struct {
@@ -472,6 +473,8 @@ func (n *NodeVariable) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 	if getContextVariable(fName, n.Name.Name) == nil { // variable not initialised
 		lhs = builder.CreateAlloca(llvm.Int32Type(), n.Name.Name)
 		setContextVariable(fName, n.Name.Name, &lhs)
+	} else {
+		lhs = *getContextVariable(fName, n.Name.Name)
 	}
 
 	rhs, err := n.AssignExpr.RHS.CodeGen(mod, builder)
@@ -500,7 +503,7 @@ func (n *NodeIf) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, 
 	builder.CreateCondBr(*cond, ifblk, elseblk)
 
 	builder.SetInsertPointAtEnd(ifblk)
-	body, err := n.Body.CodeGen(mod, builder)
+	_, err = n.Body.CodeGen(mod, builder)
 	if err != nil {
 		return nil, err
 	}
@@ -510,14 +513,14 @@ func (n *NodeIf) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, 
 		builder.CreateBr(endif)
 	}
 
-	DebugDump(body)
+	//DebugDump(body)
 
 	builder.SetInsertPointAtEnd(elseblk)
-	els, err := n.Else.CodeGen(mod, builder)
+	_, err = n.Else.CodeGen(mod, builder)
 	if err != nil {
 		return nil, err
 	}
-	DebugDump(els)
+	//DebugDump(els)
 
 	elseblk = builder.GetInsertBlock()
 	if elseblk.LastInstruction().IsATerminatorInst().IsNil() {

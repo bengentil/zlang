@@ -118,12 +118,13 @@ Zlang is at **early alpha stage** and is for educational purposes only (**don't 
 - [x] Parser
 - [ ] JIT Interpreter (In progress)
 - [x] Compiler
+- [ ] Compiler with optimizer pass
 
 Language features:
 - [x] Functions
 - [x] Extern functions (C bindings)
 - [x] Variable assignation
-- [-] Mutable Variables (To be tested)
+- [x] Mutable Variables
 - [-] Pointers (To be tested)
 - [x] Conditions (if/else)
 - [ ] Loops (for)
