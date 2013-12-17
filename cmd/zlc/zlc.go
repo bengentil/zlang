@@ -152,6 +152,12 @@ func zlc(in *InputFile) error {
 		return err
 	}
 
+	if options.EmitAST {
+		fmt.Printf("--> %s:\n%v\n\n", in.Name, root)
+		in.SetType(FILE_TYPE_BC)
+		return nil
+	}
+
 	verbose("%s: bytecode generation", in.Name)
 	_, err = root.CodeGen(&parser.Module, &parser.Builder)
 	if err != nil {
@@ -159,11 +165,6 @@ func zlc(in *InputFile) error {
 	}
 
 	in.SetType(FILE_TYPE_BC)
-
-	if options.EmitAST {
-		fmt.Printf("--> %s:\n%v\n\n", in.Name, root)
-		return nil
-	}
 
 	if options.EmitLLVM {
 		fmt.Printf("--> %s:\n", in.Name)

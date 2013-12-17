@@ -129,10 +129,21 @@ func (l *Lexer) NextItem() LexItem {
 	}
 
 	if isDigit(lastRune) {
-		for isDigit(l.peekRune()) {
+		isFloat := false
+		for isDigitOrDot(l.peekRune()) {
 			lastRune = l.getRune()
+			if lastRune == '.' {
+				if !isFloat {
+					isFloat = true
+				} else { // more than 1 dot
+					return l.emit_error("misformated float %s", l.getVal())
+				}
+			}
 		}
-		return l.emit(TOK_INT)
+		if !isFloat {
+			return l.emit(TOK_INT)
+		}
+		return l.emit(TOK_FLOAT)
 	}
 
 	if isEndOfLine(lastRune) {
@@ -230,4 +241,9 @@ func isLetter(r rune) bool {
 // isDigit reports whether r is a digit
 func isDigit(r rune) bool {
 	return unicode.IsDigit(r)
+}
+
+// isDigit reports whether r is a digit or a dot (float)
+func isDigitOrDot(r rune) bool {
+	return unicode.IsDigit(r) || r == '.'
 }

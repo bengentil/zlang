@@ -8,6 +8,7 @@ import (
 
 const (
 	POINTER_CHAR = '@'
+	TYPE_BOOL    = "bool"
 	TYPE_BYTE    = "byte"
 	TYPE_INT     = "int"
 	TYPE_INT32   = "int32"
@@ -31,6 +32,8 @@ func LLVMType(name string) llvm.Type {
 
 	// basic type
 	switch name {
+	case TYPE_BOOL:
+		return llvm.Int1Type()
 	case TYPE_BYTE:
 		return llvm.Int8Type()
 	case TYPE_INT, TYPE_INT32:

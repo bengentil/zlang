@@ -128,3 +128,12 @@ Language features:
 - [-] Pointers (To be tested)
 - [x] Conditions (if/else)
 - [ ] Loops (for)
+
+Types:
+- [x] String (string)
+- [ ] Byte (byte)
+- [x] Integer (int32, int64)
+- [x] Float (float32, float64) (Arithmetic ops in progress)
+- [ ] Arrays
+- [ ] Structs
+

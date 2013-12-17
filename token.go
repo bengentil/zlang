@@ -16,6 +16,7 @@ const (
 	TOK_IDENTIFIER
 	TOK_EOF
 
+	TOK_BOOL   // true / false
 	TOK_FLOAT  // 1.0
 	TOK_INT    // 1
 	TOK_CHAR   // 'a'
@@ -31,6 +32,12 @@ const (
 	TOK_GT     // >
 	TOK_GE     // >=
 
+	TOK_AND  // &&
+	TOK_OR   // ||
+	TOK_NAND //
+	TOK_NOR  //
+	TOK_XOR  //
+
 	TOK_ASSIGN_S // is (=)
 	TOK_NOT_S    // not (!)
 	TOK_EQUAL_S  // eq (==)
@@ -39,6 +46,12 @@ const (
 	TOK_LE_S     // le (<=)
 	TOK_GT_S     // gt (>)
 	TOK_GE_S     // ge (>=)
+
+	TOK_AND_S  // and
+	TOK_OR_S   // or
+	TOK_NAND_S // nand
+	TOK_NOR_S  // nor
+	TOK_XOR_S  // xor
 
 	TOK_PLUS  // +
 	TOK_MINUS // -
@@ -81,6 +94,7 @@ var tokens = [...]string{
 	TOK_IDENTIFIER: "IDENTIFIER",
 	TOK_EOF:        "EOF",
 
+	TOK_BOOL:   "BOOL",
 	TOK_FLOAT:  "FLOAT",
 	TOK_INT:    "INT",
 	TOK_CHAR:   "CHAR",
@@ -104,6 +118,12 @@ var tokens = [...]string{
 	TOK_LE_S:     "le",
 	TOK_GT_S:     "gt",
 	TOK_GE_S:     "ge",
+
+	TOK_AND_S:  "and",
+	TOK_OR_S:   "or",
+	TOK_NAND_S: "nand",
+	TOK_NOR_S:  "nor",
+	TOK_XOR_S:  "xor",
 
 	TOK_PLUS:  "+",
 	TOK_MINUS: "-",
@@ -160,11 +180,18 @@ func resolveIdentifier(identifier string) Token {
 	if tok_key, is_keyword := keywords[identifier]; is_keyword {
 		return tok_key
 	}
+
+	if identifier == "true" || identifier == "false" {
+		return TOK_BOOL
+	}
+
 	return TOK_IDENTIFIER
 }
 
 func (t Token) Precedence() int {
 	switch t {
+	case TOK_AND, TOK_AND_S, TOK_OR, TOK_OR_S, TOK_NOT, TOK_NOT_S:
+		return 2
 	case TOK_EQUAL, TOK_EQUAL_S, TOK_NEQ, TOK_NEQ_S, TOK_LT, TOK_LT_S, TOK_LE, TOK_LE_S, TOK_GT, TOK_GT_S, TOK_GE, TOK_GE_S:
 		return 3
 	case TOK_PLUS, TOK_MINUS:
@@ -173,4 +200,11 @@ func (t Token) Precedence() int {
 		return 5
 	}
 	return 0
+}
+
+func (t Token) IsOperator() bool {
+	if t > operator_begin && t < operator_end {
+		return true
+	}
+	return false
 }

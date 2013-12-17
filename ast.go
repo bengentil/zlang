@@ -36,6 +36,12 @@ type (
 		exprNode()
 	}
 
+	NodeBool struct {
+		Node
+		NodeExpr
+		Value bool
+	}
+
 	NodeInteger struct {
 		Node
 		NodeExpr
@@ -95,6 +101,14 @@ type (
 // Make nodes creation easier
 //
 
+func NBool(value string) *NodeBool {
+	val, err := strconv.ParseBool(value)
+	if err != nil {
+		return nil
+	}
+	return &NodeBool{Value: val}
+}
+
 func NInteger(value string) *NodeInteger {
 	val, err := strconv.Atoi(value)
 	if err != nil {
@@ -104,7 +118,11 @@ func NInteger(value string) *NodeInteger {
 }
 
 func NFloat(value string) *NodeFloat {
-	return &NodeFloat{Value: 0.0}
+	val, err := strconv.ParseFloat(value, 32)
+	if err != nil {
+		return nil
+	}
+	return &NodeFloat{Value: float32(val)}
 }
 
 func NString(value string) *NodeString {
@@ -134,6 +152,10 @@ func NBlock(stmts []NodeStmt, depth int) *NodeBlock {
 //
 // Make nodes printable
 //
+func (n *NodeBool) String() string {
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeBool\",\"value\":%v}", n.Value))
+}
+
 func (n *NodeInteger) String() string {
 	return JNil(fmt.Sprintf("{\"__type\":\"NodeInteger\",\"value\":%v}", n.Value))
 }
@@ -168,6 +190,7 @@ func (n *NodeBlock) String() string {
 
 // exprNode() ensures that only statement nodes can be
 // assigned to a NodeExpr.
+func (n *NodeBool) exprNode()        {}
 func (n *NodeInteger) exprNode()     {}
 func (n *NodeFloat) exprNode()       {}
 func (n *NodeIdentifier) exprNode()  {}
@@ -298,6 +321,15 @@ func (n *NodeIf) stmtNode()         {}
 // ********************************************
 // Code generation
 // ********************************************
+func (n *NodeBool) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
+	var i llvm.Value
+	if n.Value {
+		i = llvm.ConstInt(llvm.Int1Type(), 1, false)
+	} else {
+		i = llvm.ConstInt(llvm.Int1Type(), 0, false)
+	}
+	return &i, nil
+}
 func (n *NodeInteger) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
 	i := llvm.ConstInt(llvm.Int32Type(), uint64(n.Value), false)
 	return &i, nil
@@ -333,7 +365,7 @@ func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llv
 		res := builder.CreateMul(*l, *r, "multmp")
 		return &res, nil
 	case "/":
-		res := builder.CreateUDiv(*l, *r, "divtmp")
+		res := builder.CreateSDiv(*l, *r, "divtmp")
 		return &res, nil
 	case "+":
 		res := builder.CreateAdd(*l, *r, "addtmp")
@@ -346,6 +378,24 @@ func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llv
 		return &res, nil
 	case "neq":
 		res := builder.CreateICmp(llvm.IntNE, *l, *r, "cmptmp")
+		return &res, nil
+	case "lt":
+		res := builder.CreateICmp(llvm.IntSLT, *l, *r, "cmptmp")
+		return &res, nil
+	case "le":
+		res := builder.CreateICmp(llvm.IntSLE, *l, *r, "cmptmp")
+		return &res, nil
+	case "gt":
+		res := builder.CreateICmp(llvm.IntSGT, *l, *r, "cmptmp")
+		return &res, nil
+	case "ge":
+		res := builder.CreateICmp(llvm.IntSGE, *l, *r, "cmptmp")
+		return &res, nil
+	case "and":
+		res := builder.CreateAnd(*l, *r, "cmptmp")
+		return &res, nil
+	case "or":
+		res := builder.CreateOr(*l, *r, "cmptmp")
 		return &res, nil
 	}
 	return nil, nil
@@ -367,6 +417,7 @@ func (n *NodeBlock) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Valu
 		if err != nil {
 			return ret, err
 		}
+		//ret.Dump()
 	}
 	return ret, nil
 }
@@ -497,10 +548,17 @@ func (n *NodeIf) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, 
 	f := builder.GetInsertBlock().Parent()
 
 	ifblk := llvm.AddBasicBlock(f, "ifcond")
-	elseblk := llvm.AddBasicBlock(f, "else")
+	var elseblk llvm.BasicBlock
+	if n.Else != nil {
+		elseblk = llvm.AddBasicBlock(f, "else")
+	}
 	endif := llvm.AddBasicBlock(f, "endif")
 
-	builder.CreateCondBr(*cond, ifblk, elseblk)
+	if n.Else != nil {
+		builder.CreateCondBr(*cond, ifblk, elseblk)
+	} else {
+		builder.CreateCondBr(*cond, ifblk, endif)
+	}
 
 	builder.SetInsertPointAtEnd(ifblk)
 	_, err = n.Body.CodeGen(mod, builder)
@@ -515,16 +573,18 @@ func (n *NodeIf) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, 
 
 	//DebugDump(body)
 
-	builder.SetInsertPointAtEnd(elseblk)
-	_, err = n.Else.CodeGen(mod, builder)
-	if err != nil {
-		return nil, err
-	}
-	//DebugDump(els)
+	if n.Else != nil {
+		builder.SetInsertPointAtEnd(elseblk)
+		_, err = n.Else.CodeGen(mod, builder)
+		if err != nil {
+			return nil, err
+		}
+		//DebugDump(els)
 
-	elseblk = builder.GetInsertBlock()
-	if elseblk.LastInstruction().IsATerminatorInst().IsNil() {
-		builder.CreateBr(endif)
+		elseblk = builder.GetInsertBlock()
+		if elseblk.LastInstruction().IsATerminatorInst().IsNil() {
+			builder.CreateBr(endif)
+		}
 	}
 
 	builder.SetInsertPointAtEnd(endif)

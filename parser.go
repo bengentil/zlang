@@ -29,6 +29,10 @@ func (p *Parser) NextItem() {
 			p.RaiseError("Formating error, %v", p.currentItem.Val)
 			p.NextItem()
 		}
+		// Skip all comments
+		if p.currentItem.Token == TOK_COMMENT {
+			p.NextItem()
+		}
 	}
 }
 
@@ -49,12 +53,16 @@ func (p *Parser) RaiseError(f string, v ...interface{}) {
 	Errorln(p.Pos()+f, v...)
 }
 
+func (p *Parser) parseBoolean() *NodeBool {
+	return NBool(p.currentItem.Val)
+}
+
 func (p *Parser) parseInteger() *NodeInteger {
 	return NInteger(p.currentItem.Val)
 }
 
 func (p *Parser) parseFloat() *NodeFloat {
-	return NFloat("0.0")
+	return NFloat(p.currentItem.Val)
 }
 
 /*
@@ -145,12 +153,18 @@ func (p *Parser) parsePrimary() NodeExpr {
 		return NIdentifier(identifierName)
 	case TOK_STRING:
 		result = NString(p.currentItem.Val)
+	case TOK_BOOL:
+		result = p.parseBoolean()
 	case TOK_INT:
 		result = p.parseInteger()
+	case TOK_FLOAT:
+		result = p.parseFloat()
 	case TOK_LPAREN:
 		result = p.parseParen()
 	case TOK_RBLOCK, TOK_RPAREN:
 		return nil
+	case TOK_NOT_S:
+		return p.parseBinOP(1, nil)
 	}
 
 	if result != nil {
@@ -168,9 +182,12 @@ func (p *Parser) parseExpression() NodeExpr {
 		return nil
 	}
 
+	//Debug("LHS: %v\n", LHS)
+
 Loop:
 	for {
-		switch p.currentItem.Token {
+		//println(p.currentItem.Token.String())
+		/*switch p.currentItem.Token {
 		case TOK_MUL, TOK_DIV, TOK_PLUS, TOK_MINUS, TOK_NEQ_S, TOK_EQUAL_S: // is operator
 			//op := p.currentItem.Val
 			//p.NextItem()
@@ -178,6 +195,11 @@ Loop:
 			LHS = p.parseBinOP(1, LHS)
 			//p.NextItem()
 		default:
+			break Loop
+		}*/
+		if p.currentItem.Token.IsOperator() {
+			LHS = p.parseBinOP(1, LHS)
+		} else {
 			break Loop
 		}
 	}
@@ -269,11 +291,10 @@ func (p *Parser) parseFunctionCall(funcName string) *NodeCall {
 Loop:
 	for {
 		arg := p.parseExpression()
-		if arg == nil {
-			return nil
+		if arg != nil {
+			//Debug("->arg:%v\n", arg)
+			args = append(args, arg)
 		}
-		//Debug("->arg:%v\n", arg)
-		args = append(args, arg)
 
 		if p.currentItem.Token == TOK_RPAREN {
 			break Loop
