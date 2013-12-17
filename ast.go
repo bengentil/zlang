@@ -63,8 +63,7 @@ type (
 	NodeIdentifier struct {
 		Node
 		NodeExpr
-		Name  string
-		Value *llvm.Value
+		Name string
 	}
 
 	NodeBinOperator struct {
@@ -252,6 +251,18 @@ type (
 		Elif      []*NodeBlock // TODO: support for else if
 		Else      *NodeBlock
 	}
+
+	NodeWhile struct {
+		Node
+		NodeStmt
+		Condition NodeExpr
+		Body      *NodeBlock
+	}
+
+	NodeBreak struct {
+		Node
+		NodeStmt
+	}
 )
 
 //
@@ -279,6 +290,14 @@ func NVariable(name, typ *NodeIdentifier, assign *NodeAssignement) *NodeVariable
 
 func NIf(cond NodeExpr, body *NodeBlock, elif []*NodeBlock, els *NodeBlock) *NodeIf {
 	return &NodeIf{Condition: cond, Body: body, Elif: elif, Else: els}
+}
+
+func NWhile(cond NodeExpr, body *NodeBlock) *NodeWhile {
+	return &NodeWhile{Condition: cond, Body: body}
+}
+
+func NBreak() *NodeBreak {
+	return &NodeBreak{}
 }
 
 //
@@ -309,6 +328,14 @@ func (n *NodeIf) String() string {
 	return JNil(fmt.Sprintf("{\"__type\":\"NodeIf\",\"condition\":%v,\"body\":%v,\"elif\":%v,\"else\":%v}", n.Condition, n.Body, n.Elif, n.Else))
 }
 
+func (n *NodeWhile) String() string {
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeWhile\",\"condition\":%v,\"body\":%v}", n.Condition, n.Body))
+}
+
+func (n *NodeBreak) String() string {
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeBreak\"}"))
+}
+
 // stmtNode() ensures that only statement nodes can be
 // assigned to a NodeStmt.
 func (n *NodePrototype) stmtNode()  {}
@@ -317,6 +344,8 @@ func (n *NodeReturn) stmtNode()     {}
 func (n *NodeExpression) stmtNode() {}
 func (n *NodeVariable) stmtNode()   {}
 func (n *NodeIf) stmtNode()         {}
+func (n *NodeWhile) stmtNode()      {}
+func (n *NodeBreak) stmtNode()      {}
 
 // ********************************************
 // Code generation
@@ -590,3 +619,35 @@ func (n *NodeIf) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, 
 	builder.SetInsertPointAtEnd(endif)
 	return cond, nil
 }
+
+func (n *NodeWhile) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+
+	f := builder.GetInsertBlock().Parent()
+	whileloop := llvm.AddBasicBlock(f, "whilecond")
+	whilebody := llvm.AddBasicBlock(f, "whilebody")
+	endloop := llvm.AddBasicBlock(f, "endwhile")
+
+	builder.CreateBr(whileloop) //go into loop
+
+	builder.SetInsertPointAtEnd(whileloop)
+
+	cond, err := n.Condition.CodeGen(mod, builder)
+	if err != nil || cond == nil {
+		return nil, err
+	}
+
+	builder.CreateCondBr(*cond, whilebody, endloop)
+
+	builder.SetInsertPointAtEnd(whilebody)
+	_, err = n.Body.CodeGen(mod, builder)
+	if err != nil {
+		return nil, err
+	}
+
+	builder.CreateBr(whileloop) // loop
+
+	builder.SetInsertPointAtEnd(endloop)
+	return cond, nil
+}
+
+func (n *NodeBreak) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }

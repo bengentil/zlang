@@ -152,21 +152,20 @@ func ExampleLexOperator() {
 
 }
 
-func ExampleLexFor() {
+func ExampleLexWhile() {
 
 	src := `
 	main is func() int {
-		for {
-			for 4 neq 5 {
-				for i is 0, i lt 4, i++ {
-
-				}
+		while {
+			while 4 neq 5 {
+				break
 			}
+			break
 		}
 	}
 	`
 
-	runTest("ExampleLexFor", src)
+	runTest("ExampleLexWhile", src)
 	//output:
 	//
 	//ENDL 		 "\n"
@@ -178,33 +177,20 @@ func ExampleLexFor() {
 	//IDENTIFIER 		 "int"
 	//{ 		 "{"
 	//ENDL 		 "\n"
-	//for 		 "for"
+	//while 		 "while"
 	//{ 		 "{"
 	//ENDL 		 "\n"
-	//for 		 "for"
+	//while 		 "while"
 	//INT 		 "4"
 	//neq 		 "neq"
 	//INT 		 "5"
 	//{ 		 "{"
 	//ENDL 		 "\n"
-	//for 		 "for"
-	//IDENTIFIER 		 "i"
-	//is 		 "is"
-	//INT 		 "0"
-	//, 		 ","
-	//IDENTIFIER 		 "i"
-	//lt 		 "lt"
-	//INT 		 "4"
-	//, 		 ","
-	//IDENTIFIER 		 "i"
-	//+ 		 "+"
-	//+ 		 "+"
-	//{ 		 "{"
-	//ENDL 		 "\n"
+	//break 		 "break"
 	//ENDL 		 "\n"
 	//} 		 "}"
 	//ENDL 		 "\n"
-	//} 		 "}"
+	//break 		 "break"
 	//ENDL 		 "\n"
 	//} 		 "}"
 	//ENDL 		 "\n"

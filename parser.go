@@ -215,6 +215,35 @@ func (p *Parser) parseVariable(varName string) *NodeVariable {
 	return NVariable(LHS, nil, NAssignement(LHS, RHS))
 }
 
+func (p *Parser) parseWhile() *NodeWhile {
+	p.NextItem() // skip if keyword
+
+	var condition NodeExpr
+
+	// no condition means while true
+	if p.currentItem.Token == TOK_LBLOCK {
+		condition = NBool("true")
+	} else {
+		condition = p.parseExpression()
+		if p.currentItem.Token != TOK_LBLOCK {
+			p.RaiseError("Expected while body '{', got %v", p.currentItem.Token)
+			return nil
+		}
+	}
+
+	p.NextItem() // skip left block
+	body := p.parseBlock()
+
+	if p.currentItem.Token != TOK_RBLOCK {
+		p.RaiseError("Expected while closing '}', got %v", p.currentItem.Token)
+		return nil
+	}
+	p.NextItem() // skip right block
+
+	return NWhile(condition, body)
+
+}
+
 func (p *Parser) parseIf() *NodeIf {
 	p.NextItem() // skip if keyword
 
@@ -228,6 +257,12 @@ func (p *Parser) parseIf() *NodeIf {
 	// if
 	p.NextItem() // skip left block
 	body := p.parseBlock()
+
+	if p.currentItem.Token != TOK_RBLOCK {
+		p.RaiseError("Expected if closing '}', got %v", p.currentItem.Token)
+		return nil
+	}
+
 	p.NextItem() // skip right block
 
 	var elif []*NodeBlock
@@ -501,6 +536,11 @@ Loop:
 			p.NextItem()
 		case TOK_IF:
 			stmt = p.parseIf()
+		case TOK_WHILE:
+			stmt = p.parseWhile()
+		case TOK_BREAK:
+			stmt = NBreak()
+			p.NextItem()
 		default:
 			p.RaiseError("Unexpected token '%v'", p.currentItem.Token)
 			break Loop

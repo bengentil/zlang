@@ -127,9 +127,10 @@ Language features:
 - [x] Mutable Variables
 - [-] Pointers (To be tested)
 - [x] Conditions (if/else)
-- [ ] Loops (for)
+- [x] Loops (while)
 
 Types:
+- [x] Boolean (bool)
 - [x] String (string)
 - [ ] Byte (byte)
 - [x] Integer (int32, int64)

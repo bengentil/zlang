@@ -83,6 +83,7 @@ const (
 	TOK_CASE   // case
 	TOK_BREAK  // break
 	TOK_FOR    // for
+	TOK_WHILE  // while
 	keyword_end
 )
 
@@ -155,6 +156,7 @@ var tokens = [...]string{
 	TOK_CASE:   "case",
 	TOK_BREAK:  "break",
 	TOK_FOR:    "for",
+	TOK_WHILE:  "while",
 	// keyword_end
 }
 
