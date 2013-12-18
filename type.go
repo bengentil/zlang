@@ -17,6 +17,7 @@ const (
 	TYPE_FLOAT32 = "float32"
 	TYPE_FLOAT64 = "float64"
 	TYPE_STRING  = "string"
+	TYPE_STRUCT  = "struct"
 )
 
 func LLVMType(name string) llvm.Type {
@@ -51,4 +52,9 @@ func LLVMType(name string) llvm.Type {
 
 	// if none has been resolved
 	return llvm.VoidType()
+}
+
+// TODO: return zlang type instead of llvm type
+func ZlangType(t llvm.Type) string {
+	return ""
 }

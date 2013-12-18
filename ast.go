@@ -387,47 +387,79 @@ func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llv
 		return nil, err
 	}
 
+	if l.Type() != r.Type() {
+		return nil, fmt.Errorf("Operator '%s' with different types (%v, %v), use cast", n.Operator, l.Type(), r.Type())
+	}
+
 	// TODO: check difference between CreateMul, CreateFMul
 	// CreateUDiv, CreateSDiv
-	switch n.Operator {
-	case "*":
-		res := builder.CreateMul(*l, *r, "multmp")
-		return &res, nil
-	case "/":
-		res := builder.CreateSDiv(*l, *r, "divtmp")
-		return &res, nil
-	case "+":
-		res := builder.CreateAdd(*l, *r, "addtmp")
-		return &res, nil
-	case "-":
-		res := builder.CreateSub(*l, *r, "subtmp")
-		return &res, nil
-	case "eq":
-		res := builder.CreateICmp(llvm.IntEQ, *l, *r, "cmptmp")
-		return &res, nil
-	case "neq":
-		res := builder.CreateICmp(llvm.IntNE, *l, *r, "cmptmp")
-		return &res, nil
-	case "lt":
-		res := builder.CreateICmp(llvm.IntSLT, *l, *r, "cmptmp")
-		return &res, nil
-	case "le":
-		res := builder.CreateICmp(llvm.IntSLE, *l, *r, "cmptmp")
-		return &res, nil
-	case "gt":
-		res := builder.CreateICmp(llvm.IntSGT, *l, *r, "cmptmp")
-		return &res, nil
-	case "ge":
-		res := builder.CreateICmp(llvm.IntSGE, *l, *r, "cmptmp")
-		return &res, nil
-	case "and":
-		res := builder.CreateAnd(*l, *r, "cmptmp")
-		return &res, nil
-	case "or":
-		res := builder.CreateOr(*l, *r, "cmptmp")
-		return &res, nil
+
+	var res llvm.Value
+
+	if l.Type() == llvm.Int32Type() || l.Type() == llvm.Int64Type() {
+		switch n.Operator {
+		case "*":
+			res = builder.CreateMul(*l, *r, "multmp")
+		case "/":
+			res = builder.CreateSDiv(*l, *r, "divtmp")
+		case "+":
+			res = builder.CreateAdd(*l, *r, "addtmp")
+		case "-":
+			res = builder.CreateSub(*l, *r, "subtmp")
+		case "eq":
+			res = builder.CreateICmp(llvm.IntEQ, *l, *r, "cmptmp")
+		case "neq":
+			res = builder.CreateICmp(llvm.IntNE, *l, *r, "cmptmp")
+		case "lt":
+			res = builder.CreateICmp(llvm.IntSLT, *l, *r, "cmptmp")
+		case "le":
+			res = builder.CreateICmp(llvm.IntSLE, *l, *r, "cmptmp")
+		case "gt":
+			res = builder.CreateICmp(llvm.IntSGT, *l, *r, "cmptmp")
+		case "ge":
+			res = builder.CreateICmp(llvm.IntSGE, *l, *r, "cmptmp")
+		}
+	} else if l.Type() == llvm.FloatType() || l.Type() == llvm.DoubleType() {
+		switch n.Operator {
+		case "*":
+			res = builder.CreateFMul(*l, *r, "multmp")
+		case "/":
+			res = builder.CreateFDiv(*l, *r, "divtmp")
+		case "+":
+			res = builder.CreateFAdd(*l, *r, "addtmp")
+		case "-":
+			res = builder.CreateFSub(*l, *r, "subtmp")
+		case "eq":
+			res = builder.CreateFCmp(llvm.FloatOEQ, *l, *r, "cmptmp")
+		case "neq":
+			res = builder.CreateFCmp(llvm.FloatONE, *l, *r, "cmptmp")
+		case "lt":
+			res = builder.CreateFCmp(llvm.FloatOLT, *l, *r, "cmptmp")
+		case "le":
+			res = builder.CreateFCmp(llvm.FloatOLE, *l, *r, "cmptmp")
+		case "gt":
+			res = builder.CreateFCmp(llvm.FloatOGT, *l, *r, "cmptmp")
+		case "ge":
+			res = builder.CreateFCmp(llvm.FloatOGE, *l, *r, "cmptmp")
+		}
+	} else if l.Type() == llvm.Int1Type() {
+		switch n.Operator {
+		case "eq":
+			res = builder.CreateICmp(llvm.IntEQ, *l, *r, "cmptmp")
+		case "neq":
+			res = builder.CreateICmp(llvm.IntNE, *l, *r, "cmptmp")
+		case "and":
+			res = builder.CreateAnd(*l, *r, "cmptmp")
+		case "or":
+			res = builder.CreateOr(*l, *r, "cmptmp")
+		}
 	}
-	return nil, nil
+
+	if res.IsNil() {
+		return nil, fmt.Errorf("Operation '%s' not supported on this type %v", n.Operator, l.Type())
+	}
+
+	return &res, nil
 }
 func (n *NodeAssignement) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
 
