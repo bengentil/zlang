@@ -550,16 +550,18 @@ func (n *NodeExpression) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm
 func (n *NodeVariable) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
 	var lhs llvm.Value
 	fName := mod.LastFunction().Name()
-	if getContextVariable(fName, n.Name.Name) == nil { // variable not initialised
-		lhs = builder.CreateAlloca(llvm.Int32Type(), n.Name.Name)
-		setContextVariable(fName, n.Name.Name, &lhs)
-	} else {
-		lhs = *getContextVariable(fName, n.Name.Name)
-	}
 
+	// compute rhs first to get the type dynamically for alloca
 	rhs, err := n.AssignExpr.RHS.CodeGen(mod, builder)
 	if err != nil {
 		return nil, nil
+	}
+
+	if getContextVariable(fName, n.Name.Name) == nil { // variable not initialised
+		lhs = builder.CreateAlloca(rhs.Type(), n.Name.Name)
+		setContextVariable(fName, n.Name.Name, &lhs)
+	} else {
+		lhs = *getContextVariable(fName, n.Name.Name)
 	}
 
 	v := builder.CreateStore(*rhs, lhs)
