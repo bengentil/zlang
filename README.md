@@ -134,7 +134,7 @@ Types:
 - [x] String (string)
 - [ ] Byte (byte)
 - [x] Integer (int32, int64)
-- [x] Float (float32, float64) (Arithmetic ops in progress)
+- [x] Float (float32, float64)
 - [ ] Arrays
 - [ ] Structs
 
