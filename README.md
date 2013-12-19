@@ -128,6 +128,7 @@ Language features:
 - [-] Pointers (To be tested)
 - [x] Conditions (if/else)
 - [x] Loops (while)
+- [x] Bitwise operations (and, or, xor, nand, nor, lshift, rshift)
 
 Types:
 - [x] Boolean (bool)

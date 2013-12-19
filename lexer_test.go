@@ -17,6 +17,80 @@ func runTest(name, src string) {
 	}
 }
 
+func ExampleLexBitOps() {
+
+	src := `
+	main is func() int {
+		i is 4 lshift 1
+
+		if i nand 4 {
+			i is 4 rshift 1
+		}
+
+		i is 4 xor 5
+
+		if i nor 4 {
+
+		}
+	}
+	`
+
+	runTest("ExampleLexBitOps", src)
+	//output:
+	//
+	//ENDL 		 "\n"
+	//IDENTIFIER 		 "main"
+	//is 		 "is"
+	//func 		 "func"
+	//( 		 "("
+	//) 		 ")"
+	//IDENTIFIER 		 "int"
+	//{ 		 "{"
+	//ENDL 		 "\n"
+	//IDENTIFIER 		 "i"
+	//is 		 "is"
+	//INT 		 "4"
+	//lshift 		 "lshift"
+	//INT 		 "1"
+	//ENDL 		 "\n"
+	//ENDL 		 "\n"
+	//if 		 "if"
+	//IDENTIFIER 		 "i"
+	//nand 		 "nand"
+	//INT 		 "4"
+	//{ 		 "{"
+	//ENDL 		 "\n"
+	//IDENTIFIER 		 "i"
+	//is 		 "is"
+	//INT 		 "4"
+	//rshift 		 "rshift"
+	//INT 		 "1"
+	//ENDL 		 "\n"
+	//} 		 "}"
+	//ENDL 		 "\n"
+	//ENDL 		 "\n"
+	//IDENTIFIER 		 "i"
+	//is 		 "is"
+	//INT 		 "4"
+	//xor 		 "xor"
+	//INT 		 "5"
+	//ENDL 		 "\n"
+	//ENDL 		 "\n"
+	//if 		 "if"
+	//IDENTIFIER 		 "i"
+	//nor 		 "nor"
+	//INT 		 "4"
+	//{ 		 "{"
+	//ENDL 		 "\n"
+	//ENDL 		 "\n"
+	//} 		 "}"
+	//ENDL 		 "\n"
+	//} 		 "}"
+	//ENDL 		 "\n"
+	//EOF 		 EOF
+
+}
+
 func ExampleLexOperator() {
 
 	src := `

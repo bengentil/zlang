@@ -133,7 +133,11 @@ func (p *Parser) parseBinOP(prec int, LHS NodeExpr) NodeExpr {
 			}
 		}
 
-		LHS = NBinOp(op, LHS, RHS)
+		if op == "not" {
+			LHS = NBinOp(op, RHS, nil)
+		} else {
+			LHS = NBinOp(op, LHS, RHS)
+		}
 
 	}
 	return nil
@@ -198,10 +202,13 @@ Loop:
 			break Loop
 		}*/
 		if p.currentItem.Token.IsOperator() {
+			//Debug("LHS op: %v current item: %v\n", LHS, p.currentItem.Token)
 			LHS = p.parseBinOP(1, LHS)
 		} else {
 			break Loop
 		}
+
+		//Debug("LHS: %v\n", LHS)
 	}
 
 	//Debug("LHS: %v\nTOken: %v\n", LHS, p.currentItem.Token)
@@ -441,7 +448,7 @@ func (p *Parser) parseStatement() NodeStmt {
 	case TOK_LPAREN: // function call
 		p.NextItem() // skip '('
 		return NExpression(p.parseFunctionCall(identifierName))
-	case TOK_ASSIGN, TOK_ASSIGN_S: // variable or function definition
+	case TOK_ASSIGN_S: // variable or function definition
 		p.NextItem()
 		if p.currentItem.Token == TOK_FUNC {
 			return p.parseFunction(identifierName)

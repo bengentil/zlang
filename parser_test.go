@@ -63,6 +63,33 @@ func runTestCodeGen(name, src string) *llvm.GenericValue {
 	return &result
 }
 
+func ExampleParseBitOps() {
+
+	src := `
+	main is func() int {
+		i is 4 lshift 1
+
+		if i nand 4 {
+			i is 4 rshift 1
+		}
+
+		i is 4 xor 5
+
+		if i nor 4 {
+
+		}
+
+		if 4 lshift 1 ge 5 or 4 le 5 and 4 eq 4 rshift 1 {
+		}
+	}
+	`
+
+	runTestParser("ExampleParseBitOps", src)
+	//output:
+	//
+	//{"__type":"NodeBlock","statements":[{"__type":"NodeFunction","proto":{"__type":"NodePrototype","name":{"__type":"NodeIdentifier","name":"main"}, "type":{"__type":"NodeIdentifier","name":"int"}, "args":[]},"body":{"__type":"NodeBlock","statements":[{"__type":"NodeVariable","name":{"__type":"NodeIdentifier","name":"i"},"type":null,"assign_expr":{"__type":"NodeAssignement","lhs":{"__type":"NodeIdentifier","name":"i"}, "rhs":{"__type":"NodeBinOperator","op":"lshift", "lhs":{"__type":"NodeInteger","value":4}, "rhs":{"__type":"NodeInteger","value":1}}}},{"__type":"NodeIf","condition":{"__type":"NodeBinOperator","op":"nand", "lhs":{"__type":"NodeIdentifier","name":"i"}, "rhs":{"__type":"NodeInteger","value":4}},"body":{"__type":"NodeBlock","statements":[{"__type":"NodeVariable","name":{"__type":"NodeIdentifier","name":"i"},"type":null,"assign_expr":{"__type":"NodeAssignement","lhs":{"__type":"NodeIdentifier","name":"i"}, "rhs":{"__type":"NodeBinOperator","op":"rshift", "lhs":{"__type":"NodeInteger","value":4}, "rhs":{"__type":"NodeInteger","value":1}}}}],"depth":3},"elif":[],"else":null},{"__type":"NodeVariable","name":{"__type":"NodeIdentifier","name":"i"},"type":null,"assign_expr":{"__type":"NodeAssignement","lhs":{"__type":"NodeIdentifier","name":"i"}, "rhs":{"__type":"NodeBinOperator","op":"xor", "lhs":{"__type":"NodeInteger","value":4}, "rhs":{"__type":"NodeInteger","value":5}}}},{"__type":"NodeIf","condition":{"__type":"NodeBinOperator","op":"nor", "lhs":{"__type":"NodeIdentifier","name":"i"}, "rhs":{"__type":"NodeInteger","value":4}},"body":{"__type":"NodeBlock","statements":[],"depth":3},"elif":[],"else":null},{"__type":"NodeIf","condition":{"__type":"NodeBinOperator","op":"and", "lhs":{"__type":"NodeBinOperator","op":"or", "lhs":{"__type":"NodeBinOperator","op":"ge", "lhs":{"__type":"NodeBinOperator","op":"lshift", "lhs":{"__type":"NodeInteger","value":4}, "rhs":{"__type":"NodeInteger","value":1}}, "rhs":{"__type":"NodeInteger","value":5}}, "rhs":{"__type":"NodeBinOperator","op":"le", "lhs":{"__type":"NodeInteger","value":4}, "rhs":{"__type":"NodeInteger","value":5}}}, "rhs":{"__type":"NodeBinOperator","op":"eq", "lhs":{"__type":"NodeInteger","value":4}, "rhs":{"__type":"NodeBinOperator","op":"rshift", "lhs":{"__type":"NodeInteger","value":4}, "rhs":{"__type":"NodeInteger","value":1}}}},"body":{"__type":"NodeBlock","statements":[],"depth":3},"elif":[],"else":null}],"depth":2}}],"depth":1}
+}
+
 func ExampleParseOperator() {
 	src := `
 	main is func() int {

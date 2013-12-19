@@ -381,22 +381,28 @@ func (n *NodeIdentifier) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm
 }
 func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
 	l, err := n.LHS.CodeGen(mod, builder)
-	r, err := n.RHS.CodeGen(mod, builder)
-
-	if l == nil || r == nil || err != nil {
+	if l == nil || err != nil {
 		return nil, err
 	}
 
-	if l.Type() != r.Type() {
+	var r *llvm.Value
+	if n.RHS != nil {
+		r, err = n.RHS.CodeGen(mod, builder)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if r != nil && l.Type() != r.Type() {
 		return nil, fmt.Errorf("Operator '%s' with different types (%v, %v), use cast", n.Operator, l.Type(), r.Type())
 	}
 
-	// TODO: check difference between CreateMul, CreateFMul
-	// CreateUDiv, CreateSDiv
+	typ := l.Type()
 
+	// TODO: handle signed & unsigned integer
 	var res llvm.Value
 
-	if l.Type() == llvm.Int32Type() || l.Type() == llvm.Int64Type() {
+	if typ == llvm.Int32Type() || typ == llvm.Int64Type() {
 		switch n.Operator {
 		case "*":
 			res = builder.CreateMul(*l, *r, "multmp")
@@ -419,7 +425,7 @@ func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llv
 		case "ge":
 			res = builder.CreateICmp(llvm.IntSGE, *l, *r, "cmptmp")
 		}
-	} else if l.Type() == llvm.FloatType() || l.Type() == llvm.DoubleType() {
+	} else if typ == llvm.FloatType() || typ == llvm.DoubleType() {
 		switch n.Operator {
 		case "*":
 			res = builder.CreateFMul(*l, *r, "multmp")
@@ -442,16 +448,35 @@ func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llv
 		case "ge":
 			res = builder.CreateFCmp(llvm.FloatOGE, *l, *r, "cmptmp")
 		}
-	} else if l.Type() == llvm.Int1Type() {
+	} else if typ == llvm.Int1Type() {
 		switch n.Operator {
 		case "eq":
 			res = builder.CreateICmp(llvm.IntEQ, *l, *r, "cmptmp")
 		case "neq":
 			res = builder.CreateICmp(llvm.IntNE, *l, *r, "cmptmp")
+		}
+	}
+
+	if typ == llvm.Int1Type() || typ == llvm.Int8Type() || typ == llvm.Int32Type() || typ == llvm.Int64Type() {
+		switch n.Operator {
 		case "and":
-			res = builder.CreateAnd(*l, *r, "cmptmp")
+			res = builder.CreateAnd(*l, *r, "andtmp")
 		case "or":
-			res = builder.CreateOr(*l, *r, "cmptmp")
+			res = builder.CreateOr(*l, *r, "ortmp")
+		case "xor":
+			res = builder.CreateXor(*l, *r, "xortmp")
+		case "lshift":
+			res = builder.CreateShl(*l, *r, "lshtmp")
+		case "rshift":
+			res = builder.CreateLShr(*l, *r, "rshtmp")
+		case "not":
+			res = builder.CreateNot(*l, "nottmp")
+		case "nand":
+			and := builder.CreateAnd(*l, *r, "andtmp")
+			res = builder.CreateNot(and, "nandtmp")
+		case "nor":
+			or := builder.CreateOr(*l, *r, "ortmp")
+			res = builder.CreateNot(or, "nortmp")
 		}
 	}
 

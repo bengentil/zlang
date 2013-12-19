@@ -23,20 +23,22 @@ const (
 	TOK_STRING // "azerty"
 
 	operator_begin
-	TOK_ASSIGN // =
-	TOK_NOT    // !
-	TOK_EQUAL  // ==
-	TOK_NEQ    // !=
-	TOK_LT     // <
-	TOK_LE     // <=
-	TOK_GT     // >
-	TOK_GE     // >=
+	/*
+		TOK_ASSIGN // =
+		TOK_NOT    // !
+		TOK_EQUAL  // ==
+		TOK_NEQ    // !=
+		TOK_LT     // <
+		TOK_LE     // <=
+		TOK_GT     // >
+		TOK_GE     // >=
 
-	TOK_AND  // &&
-	TOK_OR   // ||
-	TOK_NAND //
-	TOK_NOR  //
-	TOK_XOR  //
+		TOK_AND  // &&
+		TOK_OR   // ||
+		TOK_NAND //
+		TOK_NOR  //
+		TOK_XOR  //
+	*/
 
 	TOK_ASSIGN_S // is (=)
 	TOK_NOT_S    // not (!)
@@ -52,6 +54,8 @@ const (
 	TOK_NAND_S // nand
 	TOK_NOR_S  // nor
 	TOK_XOR_S  // xor
+	TOK_LSH_S  // lshift
+	TOK_RSH_S  // rshift
 
 	TOK_PLUS  // +
 	TOK_MINUS // -
@@ -102,14 +106,16 @@ var tokens = [...]string{
 	TOK_STRING: "STRING",
 
 	// operator_begin
-	TOK_ASSIGN: "=",
-	TOK_NOT:    "!",
-	TOK_EQUAL:  "==",
-	TOK_NEQ:    "!=",
-	TOK_LT:     "<",
-	TOK_LE:     "<=",
-	TOK_GT:     ">",
-	TOK_GE:     ">=",
+	/*
+		TOK_ASSIGN: "=",
+		TOK_NOT:    "!",
+		TOK_EQUAL:  "==",
+		TOK_NEQ:    "!=",
+		TOK_LT:     "<",
+		TOK_LE:     "<=",
+		TOK_GT:     ">",
+		TOK_GE:     ">=",
+	*/
 
 	TOK_ASSIGN_S: "is",
 	TOK_NOT_S:    "not",
@@ -125,6 +131,8 @@ var tokens = [...]string{
 	TOK_NAND_S: "nand",
 	TOK_NOR_S:  "nor",
 	TOK_XOR_S:  "xor",
+	TOK_LSH_S:  "lshift",
+	TOK_RSH_S:  "rshift",
 
 	TOK_PLUS:  "+",
 	TOK_MINUS: "-",
@@ -192,14 +200,16 @@ func resolveIdentifier(identifier string) Token {
 
 func (t Token) Precedence() int {
 	switch t {
-	case TOK_AND, TOK_AND_S, TOK_OR, TOK_OR_S, TOK_NOT, TOK_NOT_S:
+	case TOK_AND_S, TOK_OR_S, TOK_NOT_S, TOK_NAND_S, TOK_NOR_S, TOK_XOR_S:
 		return 2
-	case TOK_EQUAL, TOK_EQUAL_S, TOK_NEQ, TOK_NEQ_S, TOK_LT, TOK_LT_S, TOK_LE, TOK_LE_S, TOK_GT, TOK_GT_S, TOK_GE, TOK_GE_S:
+	case TOK_EQUAL_S, TOK_NEQ_S, TOK_LT_S, TOK_LE_S, TOK_GT_S, TOK_GE_S:
 		return 3
-	case TOK_PLUS, TOK_MINUS:
+	case TOK_LSH_S, TOK_RSH_S:
 		return 4
-	case TOK_MUL, TOK_DIV:
+	case TOK_PLUS, TOK_MINUS:
 		return 5
+	case TOK_MUL, TOK_DIV:
+		return 6
 	}
 	return 0
 }
