@@ -56,6 +56,7 @@ func (i *InputFile) String() string {
 
 type Options struct {
 	Verbose    bool   `short:"v" long:"verbose" description:"verbose output" default:"false"`
+	Debug      bool   `long:"debug" description:"debug output" default:"false"`
 	Cpuprofile string `long:"cpuprofile" description:"file to output pprof data" optional:"yes"`
 	EmitLLVM   bool   `long:"emit-llvm" description:"print llvm IR and exit" optional:"yes"`
 	EmitAST    bool   `long:"emit-ast" description:"print AST JSON representation and exit" optional:"yes"`
@@ -137,6 +138,8 @@ func zlc(in *InputFile) error {
 		}
 		defer f.Close()
 	*/
+
+	zlang.EnableDebug()
 
 	verbose("[zlc %s]", in.Name)
 
