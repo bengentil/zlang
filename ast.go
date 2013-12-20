@@ -20,17 +20,14 @@ var contextBreakBlock = []llvm.BasicBlock{}
 
 func addContextBB(bb llvm.BasicBlock) {
 	contextBreakBlock = append(contextBreakBlock, bb)
-	fmt.Printf("%d bb\n", len(contextBreakBlock))
 }
 
 func getLastContextBB() llvm.BasicBlock {
-	fmt.Printf("last bb %v\n", contextBreakBlock[len(contextBreakBlock)-1])
 	return contextBreakBlock[len(contextBreakBlock)-1]
 }
 
 func removeLastContextBB() {
 	contextBreakBlock = contextBreakBlock[:len(contextBreakBlock)-1]
-	fmt.Printf("%d bb\n", len(contextBreakBlock))
 }
 
 func getContextVariable(fName, varName string) *llvm.Value {
