@@ -1,7 +1,7 @@
 Zlang
 =====
 
-Implementation of a basic Language, designed for readability
+Implementation of a basic C-like Language
 
 
 Example:
