@@ -139,7 +139,9 @@ func zlc(in *InputFile) error {
 		defer f.Close()
 	*/
 
-	zlang.EnableDebug()
+	if options.Debug {
+		zlang.EnableDebug()
+	}
 
 	verbose("[zlc %s]", in.Name)
 
