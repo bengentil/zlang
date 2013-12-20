@@ -13,29 +13,42 @@ Example:
 	*/
 
 	// extern keyword to allow binding of C functions
-	// C equivalent: extern void println(char*)
-	extern println(string)
+	// C equivalent: extern void puts(char*)
+	extern puts(string)
+	extern putchar(int)
 
 	// pointer support
 	// C equivalent: extern void* foo(int*)
 	extern foo(@int) @
 
+	// int square(int x) {
 	square is func(int x) int {
 		return x*x
 	}
 
+	// int main() {
 	main is func() int {
-		println("Hello, 世界") // support UTF-8 encoding
+		puts("Hello, 世界") // support UTF-8 encoding
 
-		// result = square(2)
+		// Dynamic typing:
+		// int result = square(2)
 		result is square(2)
+
+		// if (result != 4)
 		if result neq 4 {
-			println("FAILURE: \"not 4\"")
+			puts("FAILURE: \"not 4\"")
 		} else {
-			println("SUCCESS")
+			puts("SUCCESS")
 		}
 
-		return 0
+		// result is already declared as an int
+		// result = 32
+		result is 32
+
+		// not readable, but working
+		c is 32 while c neq 127 { putchar(c) if c eq 126 {puts("")} c is c+1}
+
+		return result
 	}
 
 ```
@@ -50,12 +63,13 @@ $ zlc -o hello hello_world.zl
 $ ./hello
 Hello, 世界
 SUCCESS
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
+$ echo $?
+32
 
 
 # with interpreter
-$ cat hello_world.zl | zlang
-Hello, 世界
-SUCCESS
+# TODO
 
 
 ```
