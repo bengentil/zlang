@@ -15,6 +15,24 @@ type ContextValue struct {
 
 var contextVariable map[ContextValue]*llvm.Value
 
+// used to for break statement
+var contextBreakBlock = []llvm.BasicBlock{}
+
+func addContextBB(bb llvm.BasicBlock) {
+	contextBreakBlock = append(contextBreakBlock, bb)
+	fmt.Printf("%d bb\n", len(contextBreakBlock))
+}
+
+func getLastContextBB() llvm.BasicBlock {
+	fmt.Printf("last bb %v\n", contextBreakBlock[len(contextBreakBlock)-1])
+	return contextBreakBlock[len(contextBreakBlock)-1]
+}
+
+func removeLastContextBB() {
+	contextBreakBlock = contextBreakBlock[:len(contextBreakBlock)-1]
+	fmt.Printf("%d bb\n", len(contextBreakBlock))
+}
+
 func getContextVariable(fName, varName string) *llvm.Value {
 	return contextVariable[ContextValue{fName, varName}]
 }
@@ -685,6 +703,8 @@ func (n *NodeWhile) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Valu
 	whileloop := llvm.AddBasicBlock(f, "whilecond")
 	whilebody := llvm.AddBasicBlock(f, "whilebody")
 	endloop := llvm.AddBasicBlock(f, "endwhile")
+	addContextBB(endloop)
+	defer removeLastContextBB()
 
 	builder.CreateBr(whileloop) //go into loop
 
@@ -709,4 +729,8 @@ func (n *NodeWhile) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Valu
 	return cond, nil
 }
 
-func (n *NodeBreak) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
+func (n *NodeBreak) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+	bb := getLastContextBB()
+	br := builder.CreateBr(bb)
+	return &br, nil
+}
