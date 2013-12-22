@@ -57,6 +57,10 @@ func (p *Parser) parseBoolean() *NodeBool {
 	return NBool(p.currentItem.Val)
 }
 
+func (p *Parser) parseByte() *NodeByte {
+	return NByte(p.currentItem.Val)
+}
+
 func (p *Parser) parseInteger() *NodeInteger {
 	return NInteger(p.currentItem.Val)
 }
@@ -92,6 +96,35 @@ func (p *Parser) parseIdentifier() NodeExpr {
 	p.RaiseError("Expected identifier, got %v", p.currentItem.Token)
 	return nil
 }*/
+
+func (p *Parser) parseArray() NodeExpr {
+	var values []NodeExpr
+
+	p.NextItem() // skip '['
+
+Loop:
+	for {
+		val := p.parseExpression()
+		if val != nil {
+			//Debug("->val:%v\n", val)
+			values = append(values, val)
+		}
+
+		if p.currentItem.Token == TOK_RBRACKET {
+			break Loop
+		}
+
+		if p.currentItem.Token != TOK_COMMA {
+			p.RaiseError("Expected ']' or ',' in array, got %v", p.currentItem.Token)
+			return nil
+		}
+
+		p.NextItem() // skip comma
+	}
+
+	p.NextItem() // skip ']'
+	return NArray(values)
+}
 
 func (p *Parser) parseParen() NodeExpr {
 	p.NextItem() // skip '('
@@ -152,19 +185,26 @@ func (p *Parser) parsePrimary() NodeExpr {
 		p.NextItem()
 		if p.currentItem.Token == TOK_LPAREN {
 			p.NextItem() // skip '('
-			return p.parseFunctionCall(identifierName)
+			return p.parseFunctionCall(NIdentifier(identifierName, nil))
 		}
-		return NIdentifier(identifierName)
+		if p.currentItem.Token == TOK_LBRACKET {
+			return p.parseArrayIdentifier(identifierName)
+		}
+		return NIdentifier(identifierName, nil)
 	case TOK_STRING:
 		result = NString(p.currentItem.Val)
 	case TOK_BOOL:
 		result = p.parseBoolean()
+	case TOK_BYTE:
+		result = p.parseByte()
 	case TOK_INT:
 		result = p.parseInteger()
 	case TOK_FLOAT:
 		result = p.parseFloat()
 	case TOK_LPAREN:
 		result = p.parseParen()
+	case TOK_LBRACKET:
+		result = p.parseArray()
 	case TOK_RBLOCK, TOK_RPAREN:
 		return nil
 	case TOK_NOT_S:
@@ -216,8 +256,7 @@ Loop:
 	return LHS
 }
 
-func (p *Parser) parseVariable(varName string) *NodeVariable {
-	LHS := NIdentifier(varName)
+func (p *Parser) parseVariable(LHS *NodeIdentifier) *NodeVariable {
 	RHS := p.parseExpression()
 	return NVariable(LHS, nil, NAssignement(LHS, RHS))
 }
@@ -328,7 +367,24 @@ func (p *Parser) parseIf() *NodeIf {
 	return NIf(condition, body, elif, els)
 }
 
-func (p *Parser) parseFunctionCall(funcName string) *NodeCall {
+func (p *Parser) parseArrayIdentifier(identifier string) *NodeIdentifier {
+	p.NextItem() // skip '['
+	exp := p.parseExpression()
+	if exp == nil {
+		return nil
+	}
+
+	if p.currentItem.Token != TOK_RBRACKET {
+		p.RaiseError("Expected ']' or ',' in array, got %v", p.currentItem.Token)
+		return nil
+	}
+
+	p.NextItem() // skip ']'
+
+	return NIdentifier(identifier, exp)
+}
+
+func (p *Parser) parseFunctionCall(funcName *NodeIdentifier) *NodeCall {
 	var args []NodeExpr
 Loop:
 	for {
@@ -351,10 +407,10 @@ Loop:
 	}
 
 	p.NextItem() // skip ')'
-	return NCall(NIdentifier(funcName), args)
+	return NCall(funcName, args)
 }
 
-func (p *Parser) parseFunction(funcName string) *NodeFunction {
+func (p *Parser) parseFunction(funcName *NodeIdentifier) *NodeFunction {
 	p.NextItem() // skip func keyword
 
 	proto := p.parsePrototype(funcName)
@@ -377,8 +433,7 @@ func (p *Parser) parseReturn() *NodeReturn {
 	return NReturn(p.parseExpression())
 }
 
-func (p *Parser) parsePrototype(funcName string) *NodePrototype {
-	fName := NIdentifier(funcName)
+func (p *Parser) parsePrototype(fName *NodeIdentifier) *NodePrototype {
 
 	if p.currentItem.Token != TOK_LPAREN {
 		p.RaiseError("Expected '(' in prototype, got %v", p.currentItem.Token)
@@ -392,10 +447,10 @@ Loop:
 	for {
 		if p.currentItem.Token == TOK_IDENTIFIER {
 			var varType, varName *NodeIdentifier
-			varType = NIdentifier(p.currentItem.Val)
+			varType = NIdentifier(p.currentItem.Val, nil)
 			p.NextItem()
 			if p.currentItem.Token == TOK_IDENTIFIER {
-				varName = NIdentifier(p.currentItem.Val)
+				varName = NIdentifier(p.currentItem.Val, nil)
 				p.NextItem()
 			}
 			variable := NVariable(varName, varType, nil)
@@ -419,10 +474,10 @@ Loop:
 
 	p.NextItem() // skip ')'
 
-	typeName := NIdentifier("")
+	typeName := NIdentifier("", nil)
 	// handle return type
 	if p.currentItem.Token == TOK_IDENTIFIER {
-		typeName = NIdentifier(p.currentItem.Val)
+		typeName = NIdentifier(p.currentItem.Val, nil)
 		p.NextItem()
 	}
 
@@ -435,7 +490,7 @@ func (p *Parser) parseExtern() *NodePrototype {
 		p.RaiseError("Expected function name in prototype, got %v", p.currentItem.Token)
 		return nil
 	}
-	fName := p.currentItem.Val
+	fName := NIdentifier(p.currentItem.Val, nil)
 	p.NextItem() // skip func name
 	return p.parsePrototype(fName)
 }
@@ -445,16 +500,25 @@ func (p *Parser) parseStatement() NodeStmt {
 	p.NextItem() // skip identifier
 
 	switch p.currentItem.Token {
+	case TOK_LBRACKET:
+		array := p.parseArrayIdentifier(identifierName)
+		if p.currentItem.Token != TOK_ASSIGN_S {
+			p.RaiseError("Unexpected token '%v' after array identifier", p.currentItem.Token)
+		}
+		p.NextItem() // skip is
+
+		return p.parseVariable(array)
+
 	case TOK_LPAREN: // function call
 		p.NextItem() // skip '('
-		return NExpression(p.parseFunctionCall(identifierName))
+		return NExpression(p.parseFunctionCall(NIdentifier(identifierName, nil)))
 	case TOK_ASSIGN_S: // variable or function definition
-		p.NextItem()
+		p.NextItem() // skip is
 		if p.currentItem.Token == TOK_FUNC {
-			return p.parseFunction(identifierName)
+			return p.parseFunction(NIdentifier(identifierName, nil))
 		}
 
-		return p.parseVariable(identifierName)
+		return p.parseVariable(NIdentifier(identifierName, nil))
 	case TOK_COMMENT:
 		p.NextItem() // skip comment
 		if p.currentItem.Token == TOK_IDENTIFIER {

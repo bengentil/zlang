@@ -130,6 +130,16 @@ func (l *Lexer) NextItem() LexItem {
 
 	if isDigit(lastRune) {
 		isFloat := false
+
+		// parse hexa
+		if lastRune == '0' && l.peekRune() == 'x' {
+			l.getRune() // get the x
+			for isHexa(l.peekRune()) {
+				lastRune = l.getRune()
+			}
+			return l.emit(TOK_BYTE)
+		}
+
 		for isDigitOrDot(l.peekRune()) {
 			lastRune = l.getRune()
 			if lastRune == '.' {
@@ -191,27 +201,15 @@ func (l *Lexer) NextItem() LexItem {
 		return l.emit(TOK_COMMENT)
 	}
 
-	// TODO: replace with resolveOperator && resolveDelimiter
-	switch lastRune {
-	case LeftParentDelim:
-		return l.emit(TOK_LPAREN)
-	case RightParentDelim:
-		return l.emit(TOK_RPAREN)
-	case LeftBlockDelim:
-		return l.emit(TOK_LBLOCK)
-	case RightBlockDelim:
-		return l.emit(TOK_RBLOCK)
-	case ',':
-		return l.emit(TOK_COMMA)
-	case '*':
-		return l.emit(TOK_MUL)
-	case '+':
-		return l.emit(TOK_PLUS)
-	case '-':
-		return l.emit(TOK_MINUS)
-	case '/':
-		return l.emit(TOK_DIV)
-	case eof:
+	if tok_op := resolveOperator(string(lastRune)); tok_op != TOK_ERROR {
+		return l.emit(tok_op)
+	}
+
+	if tok_del := resolveDelimiter(string(lastRune)); tok_del != TOK_ERROR {
+		return l.emit(tok_del)
+	}
+
+	if lastRune == eof {
 		return l.emit(TOK_EOF)
 	}
 
@@ -246,4 +244,9 @@ func isDigit(r rune) bool {
 // isDigit reports whether r is a digit or a dot (float)
 func isDigitOrDot(r rune) bool {
 	return unicode.IsDigit(r) || r == '.'
+}
+
+// isHexa reports whether r is hexa
+func isHexa(r rune) bool {
+	return strings.ContainsRune("0123456789ABCDEFabcdef", r)
 }

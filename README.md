@@ -147,9 +147,9 @@ Language features:
 Types:
 - [x] Boolean (bool)
 - [x] String (string)
-- [ ] Byte (byte)
+- [x] Byte (byte)
 - [x] Integer (int32, int64)
 - [x] Float (float32, float64)
-- [ ] Arrays
+- [ ] Arrays (In progress)
 - [ ] Structs
 

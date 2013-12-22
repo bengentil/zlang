@@ -16,10 +16,11 @@ const (
 	TOK_IDENTIFIER
 	TOK_EOF
 
-	TOK_BOOL   // true / false
-	TOK_FLOAT  // 1.0
-	TOK_INT    // 1
-	TOK_CHAR   // 'a'
+	TOK_BOOL  // true / false
+	TOK_FLOAT // 1.0
+	TOK_INT   // 1
+	//TOK_CHAR   // 'a'
+	TOK_BYTE   // 0x20
 	TOK_STRING // "azerty"
 
 	operator_begin
@@ -69,12 +70,14 @@ const (
 	operator_end
 
 	delimiter_begin
-	TOK_LPAREN // (
-	TOK_RPAREN // )
-	TOK_LBLOCK // {
-	TOK_RBLOCK // }
-	TOK_DOT    // .
-	TOK_COMMA  // ,
+	TOK_LPAREN   // (
+	TOK_RPAREN   // )
+	TOK_LBLOCK   // {
+	TOK_RBLOCK   // }
+	TOK_LBRACKET // [
+	TOK_RBRACKET // ]
+	TOK_DOT      // .
+	TOK_COMMA    // ,
 	delimiter_end
 
 	keyword_begin
@@ -99,10 +102,11 @@ var tokens = [...]string{
 	TOK_IDENTIFIER: "IDENTIFIER",
 	TOK_EOF:        "EOF",
 
-	TOK_BOOL:   "BOOL",
-	TOK_FLOAT:  "FLOAT",
-	TOK_INT:    "INT",
-	TOK_CHAR:   "CHAR",
+	TOK_BOOL:  "BOOL",
+	TOK_FLOAT: "FLOAT",
+	TOK_INT:   "INT",
+	TOK_BYTE:  "BYTE",
+	//TOK_CHAR:   "CHAR",
 	TOK_STRING: "STRING",
 
 	// operator_begin
@@ -146,12 +150,14 @@ var tokens = [...]string{
 	// operator_end
 
 	// delimiter_begin
-	TOK_LPAREN: "(",
-	TOK_RPAREN: ")",
-	TOK_LBLOCK: "{",
-	TOK_RBLOCK: "}",
-	TOK_DOT:    ".",
-	TOK_COMMA:  ",",
+	TOK_LPAREN:   "(",
+	TOK_RPAREN:   ")",
+	TOK_LBLOCK:   "{",
+	TOK_RBLOCK:   "}",
+	TOK_LBRACKET: "[",
+	TOK_RBRACKET: "]",
+	TOK_DOT:      ".",
+	TOK_COMMA:    ",",
 	// delimiter_end
 
 	// keyword_begin
@@ -181,6 +187,22 @@ func (tok Token) String() string {
 var keywords map[string]Token
 var operators map[string]Token
 var delimiters map[string]Token
+
+func resolveOperator(op string) Token {
+	if tok_op, is_operator := operators[op]; is_operator {
+		return tok_op
+	}
+
+	return TOK_ERROR // not an operator
+}
+
+func resolveDelimiter(del string) Token {
+	if tok_del, is_delimiter := delimiters[del]; is_delimiter {
+		return tok_del
+	}
+
+	return TOK_ERROR // not an delimiter
+}
 
 // identify if a string is an operator(is, not, and...), a keyword(if, for...) or an identifier
 func resolveIdentifier(identifier string) Token {

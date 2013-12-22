@@ -57,6 +57,12 @@ type (
 		Value bool
 	}
 
+	NodeByte struct {
+		Node
+		NodeExpr
+		Value uint8
+	}
+
 	NodeInteger struct {
 		Node
 		NodeExpr
@@ -78,7 +84,8 @@ type (
 	NodeIdentifier struct {
 		Node
 		NodeExpr
-		Name string
+		Key   NodeExpr // used in array
+		Value string
 	}
 
 	NodeBinOperator struct {
@@ -94,6 +101,12 @@ type (
 		NodeExpr
 		LHS *NodeIdentifier
 		RHS NodeExpr
+	}
+
+	NodeArray struct {
+		Node
+		NodeExpr
+		Values []NodeExpr
 	}
 
 	NodeCall struct {
@@ -123,6 +136,14 @@ func NBool(value string) *NodeBool {
 	return &NodeBool{Value: val}
 }
 
+func NByte(value string) *NodeByte {
+	val, err := strconv.ParseUint(value[2:], 16, 8)
+	if err != nil {
+		return nil
+	}
+	return &NodeByte{Value: uint8(val)}
+}
+
 func NInteger(value string) *NodeInteger {
 	val, err := strconv.Atoi(value)
 	if err != nil {
@@ -143,8 +164,8 @@ func NString(value string) *NodeString {
 	return &NodeString{Value: value}
 }
 
-func NIdentifier(name string) *NodeIdentifier {
-	return &NodeIdentifier{Name: name}
+func NIdentifier(value string, key NodeExpr) *NodeIdentifier {
+	return &NodeIdentifier{Value: value, Key: key}
 }
 
 func NBinOp(operator string, lhs, rhs NodeExpr) *NodeBinOperator {
@@ -153,6 +174,10 @@ func NBinOp(operator string, lhs, rhs NodeExpr) *NodeBinOperator {
 
 func NAssignement(lhs *NodeIdentifier, rhs NodeExpr) *NodeAssignement {
 	return &NodeAssignement{LHS: lhs, RHS: rhs}
+}
+
+func NArray(val []NodeExpr) *NodeArray {
+	return &NodeArray{Values: val}
 }
 
 func NCall(name *NodeIdentifier, args []NodeExpr) *NodeCall {
@@ -170,6 +195,10 @@ func (n *NodeBool) String() string {
 	return JNil(fmt.Sprintf("{\"__type\":\"NodeBool\",\"value\":%v}", n.Value))
 }
 
+func (n *NodeByte) String() string {
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeByte\",\"value\":%v}", n.Value))
+}
+
 func (n *NodeInteger) String() string {
 	return JNil(fmt.Sprintf("{\"__type\":\"NodeInteger\",\"value\":%v}", n.Value))
 }
@@ -183,7 +212,11 @@ func (n *NodeString) String() string {
 }
 
 func (n *NodeIdentifier) String() string {
-	return JNil(fmt.Sprintf("{\"__type\":\"NodeIdentifier\",\"name\":%q}", n.Name))
+	if n.Key != nil {
+		return JNil(fmt.Sprintf("{\"__type\":\"NodeIdentifier\",\"key\":%v,\"value\":%q}", n.Key, n.Value))
+	} else {
+		return JNil(fmt.Sprintf("{\"__type\":\"NodeIdentifier\",\"value\":%q}", n.Value))
+	}
 }
 
 func (n *NodeBinOperator) String() string {
@@ -192,6 +225,10 @@ func (n *NodeBinOperator) String() string {
 
 func (n *NodeAssignement) String() string {
 	return JNil(fmt.Sprintf("{\"__type\":\"NodeAssignement\",\"lhs\":%v, \"rhs\":%v}", n.LHS, n.RHS))
+}
+
+func (n *NodeArray) String() string {
+	return JNil(fmt.Sprintf("{\"__type\":\"NodeArray\",\"values\":%v}", n.Values))
 }
 
 func (n *NodeCall) String() string {
@@ -205,11 +242,13 @@ func (n *NodeBlock) String() string {
 // exprNode() ensures that only statement nodes can be
 // assigned to a NodeExpr.
 func (n *NodeBool) exprNode()        {}
+func (n *NodeByte) exprNode()        {}
 func (n *NodeInteger) exprNode()     {}
 func (n *NodeFloat) exprNode()       {}
 func (n *NodeIdentifier) exprNode()  {}
 func (n *NodeBinOperator) exprNode() {}
 func (n *NodeAssignement) exprNode() {}
+func (n *NodeArray) exprNode()       {}
 func (n *NodeCall) exprNode()        {}
 func (n *NodeBlock) exprNode()       {}
 
@@ -374,6 +413,10 @@ func (n *NodeBool) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
 	}
 	return &i, nil
 }
+func (n *NodeByte) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
+	i := llvm.ConstInt(llvm.Int8Type(), uint64(n.Value), false)
+	return &i, nil
+}
 func (n *NodeInteger) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
 	i := llvm.ConstInt(llvm.Int32Type(), uint64(n.Value), false)
 	return &i, nil
@@ -391,7 +434,7 @@ func (n *NodeString) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Val
 }
 func (n *NodeIdentifier) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
 	fName := mod.LastFunction().Name()
-	v := builder.CreateLoad(*getContextVariable(fName, n.Name), n.Name)
+	v := builder.CreateLoad(*getContextVariable(fName, n.Value), n.Value)
 	return &v, nil
 }
 func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
@@ -503,6 +546,8 @@ func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llv
 }
 func (n *NodeAssignement) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
 
+func (n *NodeArray) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
+
 func (n *NodeBlock) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
 
 	/*blockName := "entry" // function block
@@ -530,9 +575,9 @@ func (n *NodeCall) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value
 		return nil, fmt.Errorf("Empty identifier")
 	}
 
-	f := mod.NamedFunction(n.Name.Name)
+	f := mod.NamedFunction(n.Name.Value)
 	if f.IsNil() {
-		return nil, fmt.Errorf("Function %s not found", n.Name.Name)
+		return nil, fmt.Errorf("Function %s not found", n.Name.Value)
 	}
 
 	for _, exp := range n.Args {
@@ -549,11 +594,11 @@ func (n *NodeCall) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value
 func (n *NodePrototype) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
 	var f_args []llvm.Type
 	for _, arg := range n.Args {
-		f_args = append(f_args, LLVMType(arg.Type.Name))
+		f_args = append(f_args, LLVMType(arg.Type.Value))
 	}
 
-	f_name := n.Name.Name
-	f_ltype := LLVMType(n.Type.Name)
+	f_name := n.Name.Value
+	f_ltype := LLVMType(n.Type.Value)
 	f_type := llvm.FunctionType(f_ltype, f_args, false)
 	f := llvm.AddFunction(*mod, f_name, f_type)
 
@@ -566,7 +611,7 @@ func (n *NodePrototype) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.
 	for i, param := range f.Params() {
 		//fmt.Println(n.Args[i])
 		if n.Args[i].Name != nil {
-			param.SetName(n.Args[i].Name.Name)
+			param.SetName(n.Args[i].Name.Value)
 		}
 	}
 
@@ -629,16 +674,16 @@ func (n *NodeVariable) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 		return nil, nil
 	}
 
-	if getContextVariable(fName, n.Name.Name) == nil { // variable not initialised
-		lhs = builder.CreateAlloca(rhs.Type(), n.Name.Name)
-		setContextVariable(fName, n.Name.Name, &lhs)
+	if getContextVariable(fName, n.Name.Value) == nil { // variable not initialised
+		lhs = builder.CreateAlloca(rhs.Type(), n.Name.Value)
+		setContextVariable(fName, n.Name.Value, &lhs)
 	} else {
-		lhs = *getContextVariable(fName, n.Name.Name)
+		lhs = *getContextVariable(fName, n.Name.Value)
 	}
 
 	v := builder.CreateStore(*rhs, lhs)
-	/*lhs_load := builder.CreateLoad(lhs, n.Name.Name)
-	setContextVariable(fName, n.Name.Name, &lhs_load)*/
+	/*lhs_load := builder.CreateLoad(lhs, n.Name.Value)
+	setContextVariable(fName, n.Name.Value, &lhs_load)*/
 	return &v, nil
 }
 

@@ -17,6 +17,99 @@ func runTest(name, src string) {
 	}
 }
 
+func ExampleLexArray() {
+
+	src := `
+	main is func() int {
+		a is [1, 2, 3, 4]
+
+		f is [f(), f(), 1]
+
+		z is [0x5A, 0x6C, 0x61, 0x6E, 0x67, 0x21]
+
+		a[3] is 3
+
+		return z[0]
+	}
+	`
+
+	runTest("ExampleLexArray", src)
+	//output:
+	//
+	//ENDL 		 "\n"
+	//IDENTIFIER 		 "main"
+	//is 		 "is"
+	//func 		 "func"
+	//( 		 "("
+	//) 		 ")"
+	//IDENTIFIER 		 "int"
+	//{ 		 "{"
+	//ENDL 		 "\n"
+	//IDENTIFIER 		 "a"
+	//is 		 "is"
+	//[ 		 "["
+	//INT 		 "1"
+	//, 		 ","
+	//INT 		 "2"
+	//, 		 ","
+	//INT 		 "3"
+	//, 		 ","
+	//INT 		 "4"
+	//] 		 "]"
+	//ENDL 		 "\n"
+	//ENDL 		 "\n"
+	//IDENTIFIER 		 "f"
+	//is 		 "is"
+	//[ 		 "["
+	//IDENTIFIER 		 "f"
+	//( 		 "("
+	//) 		 ")"
+	//, 		 ","
+	//IDENTIFIER 		 "f"
+	//( 		 "("
+	//) 		 ")"
+	//, 		 ","
+	//INT 		 "1"
+	//] 		 "]"
+	//ENDL 		 "\n"
+	//ENDL 		 "\n"
+	//IDENTIFIER 		 "z"
+	//is 		 "is"
+	//[ 		 "["
+	//BYTE 		 "0x5A"
+	//, 		 ","
+	//BYTE 		 "0x6C"
+	//, 		 ","
+	//BYTE 		 "0x61"
+	//, 		 ","
+	//BYTE 		 "0x6E"
+	//, 		 ","
+	//BYTE 		 "0x67"
+	//, 		 ","
+	//BYTE 		 "0x21"
+	//] 		 "]"
+	//ENDL 		 "\n"
+	//ENDL 		 "\n"
+	//IDENTIFIER 		 "a"
+	//[ 		 "["
+	//INT 		 "3"
+	//] 		 "]"
+	//is 		 "is"
+	//INT 		 "3"
+	//ENDL 		 "\n"
+	//ENDL 		 "\n"
+	//return 		 "return"
+	//IDENTIFIER 		 "z"
+	//[ 		 "["
+	//INT 		 "0"
+	//] 		 "]"
+	//ENDL 		 "\n"
+	//} 		 "}"
+	//ENDL 		 "\n"
+	//EOF 		 EOF
+
+}
+
 func ExampleLexBitOps() {
 
 	src := `
