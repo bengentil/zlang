@@ -20,6 +20,22 @@ const (
 	TYPE_STRUCT  = "struct"
 )
 
+var types = map[string]llvm.Type{
+	TYPE_BOOL:    llvm.Int1Type(),
+	TYPE_BYTE:    llvm.Int8Type(),
+	TYPE_INT:     llvm.Int32Type(),
+	TYPE_INT32:   llvm.Int32Type(),
+	TYPE_INT64:   llvm.Int64Type(),
+	TYPE_FLOAT:   llvm.FloatType(),
+	TYPE_FLOAT32: llvm.FloatType(),
+	TYPE_FLOAT64: llvm.DoubleType(),
+	TYPE_STRING:  llvm.PointerType(llvm.Int8Type(), 0),
+}
+
+func RegisterType(name string, t llvm.Type) {
+	types[name] = t
+}
+
 func LLVMType(name string) llvm.Type {
 	// no type (in function declaration for instance)
 	if name == "" {
@@ -31,23 +47,8 @@ func LLVMType(name string) llvm.Type {
 		return llvm.PointerType(LLVMType(name[1:]), 0)
 	}
 
-	// basic type
-	switch name {
-	case TYPE_BOOL:
-		return llvm.Int1Type()
-	case TYPE_BYTE:
-		return llvm.Int8Type()
-	case TYPE_INT, TYPE_INT32:
-		return llvm.Int32Type()
-	case TYPE_INT64:
-		return llvm.Int64Type()
-	case TYPE_FLOAT, TYPE_FLOAT32:
-		return llvm.FloatType()
-	case TYPE_FLOAT64:
-		return llvm.DoubleType()
-	case TYPE_STRING:
-		// i8* to have char*
-		return llvm.PointerType(llvm.Int8Type(), 0)
+	if t, ok := types[name]; ok {
+		return t
 	}
 
 	// if none has been resolved
