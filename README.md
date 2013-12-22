@@ -126,7 +126,7 @@ $ zlc --emit-llvm hello_world.zl
 Status
 ------
 
-Zlang is at **early alpha stage** and is for educational purposes only (**don't implement real-world application with Zlang**)
+Zlang is at **early alpha stage** and is for learning purposes only (**don't implement real-world application with Zlang**)
 
 - [x] Lexer
 - [x] Parser
