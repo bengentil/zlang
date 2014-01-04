@@ -84,7 +84,7 @@ type (
 	NodeIdentifier struct {
 		Node
 		NodeExpr
-		Key   NodeExpr // used in array
+		Keys  []NodeExpr // used in array
 		Value string
 	}
 
@@ -164,8 +164,8 @@ func NString(value string) *NodeString {
 	return &NodeString{Value: value}
 }
 
-func NIdentifier(value string, key NodeExpr) *NodeIdentifier {
-	return &NodeIdentifier{Value: value, Key: key}
+func NIdentifier(value string, keys []NodeExpr) *NodeIdentifier {
+	return &NodeIdentifier{Value: value, Keys: keys}
 }
 
 func NBinOp(operator string, lhs, rhs NodeExpr) *NodeBinOperator {
@@ -212,8 +212,8 @@ func (n *NodeString) String() string {
 }
 
 func (n *NodeIdentifier) String() string {
-	if n.Key != nil {
-		return JNil(fmt.Sprintf("{\"__type\":\"NodeIdentifier\",\"key\":%v,\"value\":%q}", n.Key, n.Value))
+	if len(n.Keys) != 0 {
+		return JNil(fmt.Sprintf("{\"__type\":\"NodeIdentifier\",\"keys\":%v,\"value\":%q}", n.Keys, n.Value))
 	} else {
 		return JNil(fmt.Sprintf("{\"__type\":\"NodeIdentifier\",\"value\":%q}", n.Value))
 	}
@@ -546,7 +546,9 @@ func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llv
 }
 func (n *NodeAssignement) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
 
-func (n *NodeArray) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
+func (n *NodeArray) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
+	return nil, nil
+}
 
 func (n *NodeBlock) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
 

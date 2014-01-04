@@ -21,13 +21,17 @@ func ExampleLexArray() {
 
 	src := `
 	main is func() int {
-		a is [1, 2, 3, 4]
+		// int a[][]
+		// a[0][0] = 1
+		// a[1][0] = 2, a[1][1] = 3
+		// a[2][0] = 4
+		a is [[1], [2, 3], [4]]
 
 		f is [f(), f(), 1]
 
 		z is [0x5A, 0x6C, 0x61, 0x6E, 0x67, 0x21]
 
-		a[3] is 3
+		a[2][0] is 3
 
 		return z[0]
 	}
@@ -45,16 +49,30 @@ func ExampleLexArray() {
 	//IDENTIFIER 		 "int"
 	//{ 		 "{"
 	//ENDL 		 "\n"
+	//COMMENT 		 "// int a[]"...
+	//ENDL 		 "\n"
+	//COMMENT 		 "// a[0][0]"...
+	//ENDL 		 "\n"
+	//COMMENT 		 "// a[1][0]"...
+	//ENDL 		 "\n"
+	//COMMENT 		 "// a[2][0]"...
+	//ENDL 		 "\n"
 	//IDENTIFIER 		 "a"
 	//is 		 "is"
 	//[ 		 "["
+	//[ 		 "["
 	//INT 		 "1"
+	//] 		 "]"
 	//, 		 ","
+	//[ 		 "["
 	//INT 		 "2"
 	//, 		 ","
 	//INT 		 "3"
+	//] 		 "]"
 	//, 		 ","
+	//[ 		 "["
 	//INT 		 "4"
+	//] 		 "]"
 	//] 		 "]"
 	//ENDL 		 "\n"
 	//ENDL 		 "\n"
@@ -92,7 +110,10 @@ func ExampleLexArray() {
 	//ENDL 		 "\n"
 	//IDENTIFIER 		 "a"
 	//[ 		 "["
-	//INT 		 "3"
+	//INT 		 "2"
+	//] 		 "]"
+	//[ 		 "["
+	//INT 		 "0"
 	//] 		 "]"
 	//is 		 "is"
 	//INT 		 "3"

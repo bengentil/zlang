@@ -106,7 +106,7 @@ Loop:
 	for {
 		val := p.parseExpression()
 		if val != nil {
-			//Debug("->val:%v\n", val)
+			//Debug("->val:%v currentItem=%s\n", val, p.currentItem.Token)
 			values = append(values, val)
 		}
 
@@ -122,7 +122,7 @@ Loop:
 		p.NextItem() // skip comma
 	}
 
-	p.NextItem() // skip ']'
+	//p.NextItem() // skip ']'
 	return NArray(values)
 }
 
@@ -368,20 +368,33 @@ func (p *Parser) parseIf() *NodeIf {
 }
 
 func (p *Parser) parseArrayIdentifier(identifier string) *NodeIdentifier {
-	p.NextItem() // skip '['
-	exp := p.parseExpression()
-	if exp == nil {
-		return nil
+	var args []NodeExpr
+
+	// loop for multi-dimension
+Loop:
+	for {
+		p.NextItem() // skip '['
+		exp := p.parseExpression()
+		if exp == nil {
+			return nil
+		}
+
+		args = append(args, exp)
+
+		if p.currentItem.Token != TOK_RBRACKET {
+			p.RaiseError("Expected ']' or ',' in array, got %v", p.currentItem.Token)
+			return nil
+		}
+
+		p.NextItem() // skip ']'
+
+		// last dimension
+		if p.currentItem.Token != TOK_LBRACKET {
+			break Loop
+		}
 	}
 
-	if p.currentItem.Token != TOK_RBRACKET {
-		p.RaiseError("Expected ']' or ',' in array, got %v", p.currentItem.Token)
-		return nil
-	}
-
-	p.NextItem() // skip ']'
-
-	return NIdentifier(identifier, exp)
+	return NIdentifier(identifier, args)
 }
 
 func (p *Parser) parseFunctionCall(funcName *NodeIdentifier) *NodeCall {

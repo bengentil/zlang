@@ -67,13 +67,17 @@ func ExampleParseArray() {
 
 	src := `
 	main is func() int {
-		a is [1, 2, 3, 4]
+		// int a[][]
+		// a[0][0] = 1
+		// a[1][0] = 2, a[1][1] = 3
+		// a[2][0] = 4
+		a is [[1], [2, 3], [4]]
 
 		f is [f(), f(), 1]
 
 		z is [0x5A, 0x6C, 0x61, 0x6E, 0x67, 0x21]
 
-		a[3] is 3
+		a[2][0] is 3
 
 		return z[0]
 	}
@@ -82,7 +86,7 @@ func ExampleParseArray() {
 	runTestParser("ExampleParseArray", src)
 	//output:
 	//
-	//{"__type":"NodeBlock","statements":[{"__type":"NodeFunction","proto":{"__type":"NodePrototype","name":{"__type":"NodeIdentifier","value":"main"}, "type":{"__type":"NodeIdentifier","value":"int"}, "args":[]},"body":{"__type":"NodeBlock","statements":[{"__type":"NodeVariable","name":{"__type":"NodeIdentifier","value":"a"},"type":null,"assign_expr":{"__type":"NodeAssignement","lhs":{"__type":"NodeIdentifier","value":"a"}, "rhs":{"__type":"NodeArray","values":[{"__type":"NodeInteger","value":1},{"__type":"NodeInteger","value":2},{"__type":"NodeInteger","value":3},{"__type":"NodeInteger","value":4}]}}},{"__type":"NodeVariable","name":{"__type":"NodeIdentifier","value":"f"},"type":null,"assign_expr":{"__type":"NodeAssignement","lhs":{"__type":"NodeIdentifier","value":"f"}, "rhs":{"__type":"NodeArray","values":[{"__type":"NodeCall","name":{"__type":"NodeIdentifier","value":"f"}, "args":[]},{"__type":"NodeCall","name":{"__type":"NodeIdentifier","value":"f"}, "args":[]},{"__type":"NodeInteger","value":1}]}}},{"__type":"NodeVariable","name":{"__type":"NodeIdentifier","value":"z"},"type":null,"assign_expr":{"__type":"NodeAssignement","lhs":{"__type":"NodeIdentifier","value":"z"}, "rhs":{"__type":"NodeArray","values":[{"__type":"NodeByte","value":90},{"__type":"NodeByte","value":108},{"__type":"NodeByte","value":97},{"__type":"NodeByte","value":110},{"__type":"NodeByte","value":103},{"__type":"NodeByte","value":33}]}}},{"__type":"NodeVariable","name":{"__type":"NodeIdentifier","key":{"__type":"NodeInteger","value":3},"value":"a"},"type":null,"assign_expr":{"__type":"NodeAssignement","lhs":{"__type":"NodeIdentifier","key":{"__type":"NodeInteger","value":3},"value":"a"}, "rhs":{"__type":"NodeInteger","value":3}}},{"__type":"NodeReturn","value":{"__type":"NodeIdentifier","key":{"__type":"NodeInteger","value":0},"value":"z"}}],"depth":2}}],"depth":1}
+	//{"__type":"NodeBlock","statements":[{"__type":"NodeFunction","proto":{"__type":"NodePrototype","name":{"__type":"NodeIdentifier","value":"main"}, "type":{"__type":"NodeIdentifier","value":"int"}, "args":[]},"body":{"__type":"NodeBlock","statements":[{"__type":"NodeVariable","name":{"__type":"NodeIdentifier","value":"a"},"type":null,"assign_expr":{"__type":"NodeAssignement","lhs":{"__type":"NodeIdentifier","value":"a"}, "rhs":{"__type":"NodeArray","values":[{"__type":"NodeArray","values":[{"__type":"NodeInteger","value":1}]},{"__type":"NodeArray","values":[{"__type":"NodeInteger","value":2},{"__type":"NodeInteger","value":3}]},{"__type":"NodeArray","values":[{"__type":"NodeInteger","value":4}]}]}}},{"__type":"NodeVariable","name":{"__type":"NodeIdentifier","value":"f"},"type":null,"assign_expr":{"__type":"NodeAssignement","lhs":{"__type":"NodeIdentifier","value":"f"}, "rhs":{"__type":"NodeArray","values":[{"__type":"NodeCall","name":{"__type":"NodeIdentifier","value":"f"}, "args":[]},{"__type":"NodeCall","name":{"__type":"NodeIdentifier","value":"f"}, "args":[]},{"__type":"NodeInteger","value":1}]}}},{"__type":"NodeVariable","name":{"__type":"NodeIdentifier","value":"z"},"type":null,"assign_expr":{"__type":"NodeAssignement","lhs":{"__type":"NodeIdentifier","value":"z"}, "rhs":{"__type":"NodeArray","values":[{"__type":"NodeByte","value":90},{"__type":"NodeByte","value":108},{"__type":"NodeByte","value":97},{"__type":"NodeByte","value":110},{"__type":"NodeByte","value":103},{"__type":"NodeByte","value":33}]}}},{"__type":"NodeVariable","name":{"__type":"NodeIdentifier","keys":[{"__type":"NodeInteger","value":2},{"__type":"NodeInteger","value":0}],"value":"a"},"type":null,"assign_expr":{"__type":"NodeAssignement","lhs":{"__type":"NodeIdentifier","keys":[{"__type":"NodeInteger","value":2},{"__type":"NodeInteger","value":0}],"value":"a"}, "rhs":{"__type":"NodeInteger","value":3}}},{"__type":"NodeReturn","value":{"__type":"NodeIdentifier","keys":[{"__type":"NodeInteger","value":0}],"value":"z"}}],"depth":2}}],"depth":1}
 
 }
 
