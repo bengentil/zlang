@@ -151,5 +151,5 @@ Types:
 - [x] Integer (int32, int64)
 - [x] Float (float32, float64)
 - [ ] Arrays (In progress)
-- [ ] Structs
+- [ ] Structs (In progress)
 
