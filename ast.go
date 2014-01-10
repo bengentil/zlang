@@ -433,9 +433,26 @@ func (n *NodeString) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Val
 	return &v, nil
 }
 func (n *NodeIdentifier) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+	var ret llvm.Value
 	fName := mod.LastFunction().Name()
-	v := builder.CreateLoad(*getContextVariable(fName, n.Value), n.Value)
-	return &v, nil
+	v := *getContextVariable(fName, n.Value)
+
+	//Debug("n=%v n.keys=%d\n", n, len(n.Keys))
+
+	if len(n.Keys) == 0 { // not an array
+		ret = builder.CreateLoad(v, n.Value)
+	} else { // array identifier
+		ret = v
+		for i := 0; i < len(n.Keys); i++ {
+			item, err := n.Keys[i].CodeGen(mod, builder)
+			if err != nil {
+				return nil, err
+			}
+			ret = builder.CreateInBoundsGEP(ret, []llvm.Value{llvm.ConstInt(llvm.Int32Type(), 0, false), *item}, "ptr"+n.Value)
+		}
+		ret = builder.CreateLoad(ret, n.Value)
+	}
+	return &ret, nil
 }
 func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
 	l, err := n.LHS.CodeGen(mod, builder)
@@ -546,8 +563,42 @@ func (n *NodeBinOperator) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llv
 }
 func (n *NodeAssignement) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) { return nil, nil }
 
-func (n *NodeArray) CodeGen(*llvm.Module, *llvm.Builder) (*llvm.Value, error) {
-	return nil, nil
+func (n *NodeArray) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
+	//Debug(n.String())
+	if len(n.Values) < 1 {
+		return nil, fmt.Errorf("Empty array")
+	}
+
+	var typ llvm.Type
+	var vals []llvm.Value
+	for i, v := range n.Values {
+		item, err := v.CodeGen(mod, builder)
+		if err != nil || item == nil {
+			return nil, err
+		}
+		if i == 0 {
+			//Debug("--> array el0 is %v\n", item.Type())
+			typ = item.Type() // llvm.ArrayType(item.Type(), len(n.Values))
+		}
+
+		if item.Type() != typ {
+			return nil, fmt.Errorf("Wrong type in array on element %d, expecting %v got %v", i, typ, item.Type())
+		}
+
+		vals = append(vals, *item)
+		/*
+			idx := llvm.ConstInt(llvm.Int32Type(), uint64(i), false)
+			item_ptr := builder.CreateInBoundsGEP(array, []llvm.Value{idx}, array.Name()+"_"+strconv.Itoa(i))
+			//item_loaded := builder.CreateLoad(*item, "")
+			builder.CreateStore(*item, item_ptr)
+		*/
+	}
+
+	/*size := llvm.ConstInt(llvm.Int32Type(), uint64(len(n.Values)), false)
+	array = builder.CreateArrayAlloca(typ, size, "array")*/
+
+	array := llvm.ConstArray(typ, vals)
+	return &array, nil
 }
 
 func (n *NodeBlock) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.Value, error) {
@@ -677,10 +728,28 @@ func (n *NodeVariable) CodeGen(mod *llvm.Module, builder *llvm.Builder) (*llvm.V
 	}
 
 	if getContextVariable(fName, n.Name.Value) == nil { // variable not initialised
+		//if rhs.Type().TypeKind() != llvm.ArrayTypeKind {
 		lhs = builder.CreateAlloca(rhs.Type(), n.Name.Value)
+		/*} else { // already an instruction (alloca)
+			Debug("Array %v\n", n.Name.Value)
+			size := llvm.ConstInt(llvm.Int32Type(), uint64(rhs.Type().ArrayLength()), false)
+			lhs = builder.CreateArrayAlloca(rhs.Type(), size, n.Name.Value)
+		}*/
 		setContextVariable(fName, n.Name.Value, &lhs)
 	} else {
 		lhs = *getContextVariable(fName, n.Name.Value)
+	}
+
+	// array
+	if len(n.Name.Keys) > 0 {
+		for i := 0; i < len(n.Name.Keys); i++ {
+			item, err := n.Name.Keys[i].CodeGen(mod, builder)
+			if err != nil {
+				return nil, err
+			}
+			lhs = builder.CreateInBoundsGEP(lhs, []llvm.Value{llvm.ConstInt(llvm.Int32Type(), 0, false), *item}, "ptr"+n.Name.Value)
+		}
+		// = builder.CreateLoad(gep, n.Name.Value)
 	}
 
 	v := builder.CreateStore(*rhs, lhs)
