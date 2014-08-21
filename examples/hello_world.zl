@@ -1,0 +1,43 @@
+    /*
+        1st Hello world script in zlang
+    */
+
+    // extern keyword to allow binding of C functions
+    // C equivalent: extern void puts(char*)
+    extern puts(string)
+    extern putchar(int)
+
+    // pointer support
+    // C equivalent: extern void* foo(int*)
+    //extern foo(@int) @
+
+    // int square(int x) {
+    square is func(int x) int {
+        return x*x
+    }
+
+    // int main() {
+    main is func() int {
+        puts("Hello, 世界") // support UTF-8 encoding
+
+        // Dynamic typing:
+        // int result = square(2)
+        result is square(2)
+
+        // if (result != 4)
+        if result neq 4 {
+            puts("FAILURE: \"not 4\"")
+        } else {
+            puts("SUCCESS")
+        }
+
+        // result is already declared as an int
+        // result = 32
+        result is 32
+
+        // not readable, but working
+        c is 32 while c neq 127 { putchar(c) if c eq 126 {puts("")} c is c+1}
+
+        return result
+    }
+
