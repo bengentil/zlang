@@ -5,7 +5,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/axw/gollvm/llvm"
+	"github.com/go-llvm/llvm"
 	"github.com/bengentil/zlang"
 	"os"
 	"strings"

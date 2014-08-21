@@ -3,7 +3,7 @@
 package zlang
 
 import (
-	"github.com/axw/gollvm/llvm"
+	"github.com/go-llvm/llvm"
 )
 
 const (

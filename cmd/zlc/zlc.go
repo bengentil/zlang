@@ -4,7 +4,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/axw/gollvm/llvm"
+	"github.com/go-llvm/llvm"
 	"github.com/bengentil/zlang"
 	"github.com/jessevdk/go-flags"
 	"io/ioutil"

@@ -2,7 +2,7 @@
 // license can be found in the LICENSE file (MIT License)
 package zlang
 
-import "github.com/axw/gollvm/llvm"
+import "github.com/go-llvm/llvm"
 
 func init() {
 	// store token associations in maps

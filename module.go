@@ -4,7 +4,7 @@ package zlang
 
 /*
 import (
-	"github.com/axw/gollvm/llvm"
+	"github.com/go-llvm/llvm"
 )
 
 type Module struct {
